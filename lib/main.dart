@@ -118,7 +118,7 @@ class WelcomeScreen extends StatelessWidget {
               ),
               const Spacer(),
               ElevatedButton(
-                onPressed: () => Navigator.pushNamed(context, '/login'),
+                onPressed: () => Navigator.pushNamed(context, '/feed'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF12A9C9), // Teal/Cyan button
                   foregroundColor: const Color(0xFF0A191E),

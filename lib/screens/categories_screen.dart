@@ -46,7 +46,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
 
   List<dynamic> get _filtered => _selectedFilter == 'TOUS'
       ? _articles
-      : _articles.where((a) => a['criticality'] == _selectedFilter).toList();
+      : _articles.where((a) => (a['criticality'] as String? ?? '').toUpperCase() == _selectedFilter).toList();
 
   @override
   Widget build(BuildContext context) {
@@ -68,9 +68,9 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
             child: Row(
               children: [
-                _statChip('${_articles.where((a) => a['criticality'] == 'CRITIQUE').length}', 'CRITIQUES', const Color(0xFFEF4444)),
+                _statChip('${_articles.where((a) => (a['criticality'] as String? ?? '').toUpperCase() == 'CRITIQUE').length}', 'CRITIQUES', const Color(0xFFEF4444)),
                 const SizedBox(width: 12),
-                _statChip('${_articles.where((a) => a['criticality'] == 'ÉLEVÉ').length}', 'ÉLEVÉS', const Color(0xFFF97316)),
+                _statChip('${_articles.where((a) => (a['criticality'] as String? ?? '').toUpperCase() == 'ÉLEVÉ').length}', 'ÉLEVÉS', const Color(0xFFF97316)),
                 const SizedBox(width: 12),
                 _statChip('${_articles.length}', 'TOTAL', const Color(0xFF38BDF8)),
               ],

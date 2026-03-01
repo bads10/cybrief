@@ -44,10 +44,10 @@ app.get('/api/stats', async (req, res) => {
     try {
         const [total, critique, eleve, moyen, faible, last24h, allArticles] = await Promise.all([
             prisma.article.count({ where: { status: 'PUBLISHED' } }),
-            prisma.article.count({ where: { status: 'PUBLISHED', criticality: 'CRITIQUE' } }),
-            prisma.article.count({ where: { status: 'PUBLISHED', criticality: 'ÉLEVÉ' } }),
-            prisma.article.count({ where: { status: 'PUBLISHED', criticality: 'MOYEN' } }),
-            prisma.article.count({ where: { status: 'PUBLISHED', criticality: 'FAIBLE' } }),
+            prisma.article.count({ where: { status: 'PUBLISHED', criticality: { equals: 'CRITIQUE', mode: 'insensitive' } } }),
+            prisma.article.count({ where: { status: 'PUBLISHED', criticality: { equals: 'ÉLEVÉ', mode: 'insensitive' } } }),
+            prisma.article.count({ where: { status: 'PUBLISHED', criticality: { equals: 'MOYEN', mode: 'insensitive' } } }),
+            prisma.article.count({ where: { status: 'PUBLISHED', criticality: { equals: 'FAIBLE', mode: 'insensitive' } } }),
             prisma.article.count({ where: { status: 'PUBLISHED', createdAt: { gte: new Date(Date.now() - 86400000) } } }),
             prisma.article.findMany({ where: { status: 'PUBLISHED' }, select: { tags: true, cve: true, attackType: true }, take: 200 }),
         ]);
