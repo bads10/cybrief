@@ -6,7 +6,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../widgets/custom_bottom_nav_bar.dart';
 
 // URL du backend — localhost fonctionne dans le simulateur iOS
-const String _kBaseUrl = 'http://localhost:3000';
+const String _kBaseUrl = 'https://cybrief-production.up.railway.app';
 
 class Article {
   final int id;
