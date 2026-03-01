@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import '../widgets/custom_bottom_nav_bar.dart';
+
+const String _kBaseUrl = 'https://cybrief-production.up.railway.app';
 
 class CategoriesScreen extends StatefulWidget {
   const CategoriesScreen({super.key});
@@ -10,32 +15,38 @@ class CategoriesScreen extends StatefulWidget {
 }
 
 class _CategoriesScreenState extends State<CategoriesScreen> {
-  final Map<String, bool> _categories = {
-    'Phishing': true,
-    'Ransomware': true,
-    'Malware': false,
-    'Zero-day': false,
-    'Data Breach': true,
-    'DDoS Attacks': false,
+  List<dynamic> _articles = [];
+  bool _loading = true;
+  String _selectedFilter = 'TOUS';
+
+  final List<String> _filters = ['TOUS', 'CRITIQUE', 'ÉLEVÉ', 'MOYEN'];
+  final Map<String, Color> _critColors = {
+    'CRITIQUE': const Color(0xFFEF4444),
+    'ÉLEVÉ': const Color(0xFFF97316),
+    'MOYEN': const Color(0xFFFBBF24),
+    'FAIBLE': const Color(0xFF22C55E),
   };
 
-  final Map<String, String> _descriptions = {
-    'Phishing': 'Emails, appels et sites web trompeurs',
-    'Ransomware': 'Chiffrement de fichiers et extorsion',
-    'Malware': 'Virus, vers et logiciels espions',
-    'Zero-day': 'Vulnérabilités inconnues',
-    'Data Breach': 'Fuites de données et accès non autorisés',
-    'DDoS Attacks': 'Attaques par déni de service distribué',
-  };
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
 
-  final Map<String, IconData> _icons = {
-    'Phishing': LucideIcons.mousePointerClick,
-    'Ransomware': LucideIcons.lock,
-    'Malware': LucideIcons.bug,
-    'Zero-day': LucideIcons.triangleAlert,
-    'Data Breach': LucideIcons.database,
-    'DDoS Attacks': LucideIcons.zapOff,
-  };
+  Future<void> _load() async {
+    try {
+      final r = await http.get(Uri.parse('$_kBaseUrl/api/articles'));
+      if (r.statusCode == 200) {
+        setState(() { _articles = json.decode(r.body); _loading = false; });
+      }
+    } catch (_) {
+      setState(() => _loading = false);
+    }
+  }
+
+  List<dynamic> get _filtered => _selectedFilter == 'TOUS'
+      ? _articles
+      : _articles.where((a) => a['criticality'] == _selectedFilter).toList();
 
   @override
   Widget build(BuildContext context) {
@@ -44,194 +55,170 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(LucideIcons.chevronLeft, color: Colors.white),
-          onPressed: () => Navigator.pushReplacementNamed(context, '/feed'),
-        ),
-        title: Text(
-          'Catégories de menaces',
-          style: GoogleFonts.inter(
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-            color: Colors.white,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pushReplacementNamed(context, '/feed'),
-            child: Text(
-              'Terminer',
-              style: GoogleFonts.inter(
-                fontWeight: FontWeight.bold,
-                color: const Color(0xFF135BEC),
-              ),
-            ),
-          ),
-        ],
+        automaticallyImplyLeading: false,
+        title: Text('INTEL', style: GoogleFonts.inter(
+          fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white, letterSpacing: 1.5,
+        )),
       ),
       body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-            child: TextField(
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                hintText: 'Rechercher des catégories',
-                hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
-                prefixIcon: Icon(LucideIcons.search, color: Colors.white.withValues(alpha: 0.3), size: 20),
-                filled: true,
-                fillColor: Colors.white.withValues(alpha: 0.05),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                contentPadding: const EdgeInsets.symmetric(vertical: 0),
-              ),
-            ),
-          ),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildHeroSection(),
-                  const SizedBox(height: 32),
-                  Text(
-                    'Catégories populaires',
-                    style: GoogleFonts.inter(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: _categories.length,
-                    separatorBuilder: (context, index) => const SizedBox(height: 16),
-                    itemBuilder: (context, index) {
-                      String key = _categories.keys.elementAt(index);
-                      return _buildCategoryItem(key);
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHeroSection() {
-    return Container(
-      width: double.infinity,
-      height: 220,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        image: const DecorationImage(
-          image: NetworkImage('https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&q=80&w=800'),
-          fit: BoxFit.cover,
-          opacity: 0.4,
-        ),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            const Color(0xFF135BEC).withValues(alpha: 0.4),
-            const Color(0xFF0F172A).withValues(alpha: 0.9),
-          ],
-        ),
-      ),
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'MODE FOCUS',
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFF38BDF8),
-              letterSpacing: 1.2,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Surveillez les menaces critiques',
-            style: GoogleFonts.inter(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Sélectionnez les catégories pour personnaliser votre flux.',
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              color: Colors.white.withValues(alpha: 0.7),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCategoryItem(String name) {
-    bool isSelected = _categories[name]!;
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.03),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1E293B),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(_icons[name], size: 20, color: isSelected ? const Color(0xFF38BDF8) : Colors.white.withValues(alpha: 0.4)),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          // Header avec stats rapides
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+            child: Row(
               children: [
-                Text(
-                  name,
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                Text(
-                  _descriptions[name]!,
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    color: Colors.white.withValues(alpha: 0.4),
-                  ),
-                ),
+                _statChip('${_articles.where((a) => a['criticality'] == 'CRITIQUE').length}', 'CRITIQUES', const Color(0xFFEF4444)),
+                const SizedBox(width: 12),
+                _statChip('${_articles.where((a) => a['criticality'] == 'ÉLEVÉ').length}', 'ÉLEVÉS', const Color(0xFFF97316)),
+                const SizedBox(width: 12),
+                _statChip('${_articles.length}', 'TOTAL', const Color(0xFF38BDF8)),
               ],
             ),
           ),
-          Checkbox(
-            value: isSelected,
-            onChanged: (val) => setState(() => _categories[name] = val!),
-            activeColor: const Color(0xFF135BEC),
-            side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+          // Filtres
+          SizedBox(
+            height: 36,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              itemCount: _filters.length,
+              itemBuilder: (ctx, i) {
+                final f = _filters[i];
+                final selected = f == _selectedFilter;
+                return GestureDetector(
+                  onTap: () => setState(() => _selectedFilter = f),
+                  child: Container(
+                    margin: const EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: selected ? const Color(0xFF38BDF8).withValues(alpha: 0.15) : Colors.white.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: selected ? const Color(0xFF38BDF8) : Colors.white.withValues(alpha: 0.1),
+                      ),
+                    ),
+                    child: Text(f, style: GoogleFonts.inter(
+                      fontSize: 11, fontWeight: FontWeight.bold,
+                      color: selected ? const Color(0xFF38BDF8) : Colors.white.withValues(alpha: 0.5),
+                      letterSpacing: 1,
+                    )),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Liste
+          Expanded(
+            child: _loading
+                ? const Center(child: CircularProgressIndicator(color: Color(0xFF38BDF8)))
+                : _filtered.isEmpty
+                    ? _emptyState()
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        itemCount: _filtered.length,
+                        itemBuilder: (ctx, i) => _intelCard(_filtered[i]),
+                      ),
           ),
         ],
       ),
+      bottomNavigationBar: const CustomBottomNavBar(currentIndex: 1),
+    );
+  }
+
+  Widget _statChip(String value, String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        children: [
+          Text(value, style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: color)),
+          Text(label, style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.bold, color: color.withValues(alpha: 0.7), letterSpacing: 0.8)),
+        ],
+      ),
+    );
+  }
+
+  Widget _intelCard(dynamic article) {
+    final crit = article['criticality'] as String? ?? 'MOYEN';
+    final color = _critColors[crit] ?? const Color(0xFFFBBF24);
+    final cve = (article['cve'] as String? ?? '').trim();
+    final attackType = (article['attackType'] as String? ?? '').trim();
+    final iocs = (article['iocs'] as String? ?? '').trim();
+    final hasIndicators = cve.isNotEmpty || attackType.isNotEmpty || iocs.isNotEmpty;
+
+    return GestureDetector(
+      onTap: () => Navigator.pushNamed(context, '/threat-detail', arguments: article),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.03),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color.withValues(alpha: 0.15)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(crit, style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: color)),
+                ),
+                const Spacer(),
+                Icon(LucideIcons.chevronRight, size: 14, color: Colors.white.withValues(alpha: 0.3)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(article['title'] ?? '', maxLines: 2, overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white, height: 1.3)),
+            if (hasIndicators) ...[
+              const SizedBox(height: 10),
+              Wrap(spacing: 6, runSpacing: 4, children: [
+                if (cve.isNotEmpty) _tag(cve.split(',').first.trim(), const Color(0xFF38BDF8), LucideIcons.shieldAlert),
+                if (attackType.isNotEmpty) _tag(attackType, const Color(0xFFA78BFA), LucideIcons.crosshair),
+                if (iocs.isNotEmpty) _tag('IOC', const Color(0xFFFBBF24), LucideIcons.activity),
+              ]),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _tag(String text, Color color, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, size: 10, color: color),
+        const SizedBox(width: 4),
+        Text(text, style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: color)),
+      ]),
+    );
+  }
+
+  Widget _emptyState() {
+    return Center(
+      child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Icon(LucideIcons.shieldOff, size: 48, color: Colors.white.withValues(alpha: 0.2)),
+        const SizedBox(height: 16),
+        Text('Aucune menace trouvée', style: GoogleFonts.inter(color: Colors.white.withValues(alpha: 0.4), fontSize: 16)),
+      ]),
     );
   }
 }

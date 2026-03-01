@@ -39,6 +39,40 @@ app.get('/api/articles', async (req, res) => {
     }
 });
 
+// Stats pour l'app
+app.get('/api/stats', async (req, res) => {
+    try {
+        const [total, critique, eleve, moyen, faible, last24h, allArticles] = await Promise.all([
+            prisma.article.count({ where: { status: 'PUBLISHED' } }),
+            prisma.article.count({ where: { status: 'PUBLISHED', criticality: 'CRITIQUE' } }),
+            prisma.article.count({ where: { status: 'PUBLISHED', criticality: 'ÉLEVÉ' } }),
+            prisma.article.count({ where: { status: 'PUBLISHED', criticality: 'MOYEN' } }),
+            prisma.article.count({ where: { status: 'PUBLISHED', criticality: 'FAIBLE' } }),
+            prisma.article.count({ where: { status: 'PUBLISHED', createdAt: { gte: new Date(Date.now() - 86400000) } } }),
+            prisma.article.findMany({ where: { status: 'PUBLISHED' }, select: { tags: true, cve: true, attackType: true }, take: 200 }),
+        ]);
+        // Top tags
+        const tagCount = {};
+        allArticles.forEach(a => {
+            (a.tags || '').split(',').map(t => t.trim()).filter(Boolean).forEach(t => {
+                tagCount[t] = (tagCount[t] || 0) + 1;
+            });
+        });
+        const topTags = Object.entries(tagCount).sort((a,b) => b[1]-a[1]).slice(0,8).map(([tag,count]) => ({ tag, count }));
+        // Top attack types
+        const attackCount = {};
+        allArticles.forEach(a => {
+            if (a.attackType) attackCount[a.attackType] = (attackCount[a.attackType] || 0) + 1;
+        });
+        const topAttacks = Object.entries(attackCount).sort((a,b) => b[1]-a[1]).slice(0,5).map(([type,count]) => ({ type, count }));
+        // Recent CVEs
+        const cves = [...new Set(allArticles.flatMap(a => (a.cve || '').split(',').map(c => c.trim()).filter(c => c.startsWith('CVE'))))].slice(0,10);
+        res.json({ total, critique, eleve, moyen, faible, last24h, topTags, topAttacks, cves });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Webhook Make.com
 app.post('/api/webhook/alerts', async (req, res) => {
     try {
