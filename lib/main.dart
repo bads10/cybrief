@@ -89,16 +89,12 @@ class WelcomeScreen extends StatelessWidget {
                   Container(height: 1, width: 30, color: const Color(0xFF135BEC).withValues(alpha: 0.3)),
                 ],
               ),
-              const SizedBox(height: 40),
-              Text(
-                'Cybrief',
-                style: GoogleFonts.libreBaskerville( // Using a serif font as per design
-                  fontSize: 56,
-                  fontWeight: FontWeight.w400,
-                  fontStyle: FontStyle.italic,
-                  color: Colors.white,
-                  letterSpacing: -1,
-                ),
+              const SizedBox(height: 24),
+              Image.asset(
+                'assets/images/logo.png',
+                width: 260,
+                height: 260,
+                fit: BoxFit.contain,
               ),
               const SizedBox(height: 48),
               Container(
