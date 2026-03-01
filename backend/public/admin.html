@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Cybrief — Admin</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:#0f172a; --surface:#1e293b; --surface2:#263348;
+    --border:rgba(255,255,255,0.07); --primary:#38bdf8;
+    --text:#f1f5f9; --muted:#64748b;
+    --red:#ef4444; --orange:#f97316; --yellow:#eab308;
+    --blue:#3b82f6; --green:#22c55e; --purple:#a855f7;
+  }
+  body { background:var(--bg); color:var(--text); font-family:'Inter',-apple-system,sans-serif; min-height:100vh; display:flex; }
+
+  /* Sidebar */
+  .sidebar { width:220px; background:var(--surface); border-right:1px solid var(--border); display:flex; flex-direction:column; padding:24px 0; position:fixed; top:0; left:0; bottom:0; }
+  .sidebar-logo { padding:0 20px 28px; font-size:18px; font-weight:800; color:var(--primary); letter-spacing:-.5px; }
+  .sidebar-logo span { color:var(--text); }
+  .nav-item { display:flex; align-items:center; gap:10px; padding:11px 20px; cursor:pointer; border-radius:8px; margin:2px 8px; font-size:14px; font-weight:500; color:var(--muted); transition:all .15s; text-decoration:none; }
+  .nav-item:hover { background:var(--surface2); color:var(--text); }
+  .nav-item.active { background:rgba(56,189,248,.12); color:var(--primary); }
+  .nav-item svg { width:16px; height:16px; flex-shrink:0; }
+  .nav-badge { margin-left:auto; background:var(--red); color:#fff; font-size:10px; font-weight:700; padding:2px 6px; border-radius:10px; min-width:18px; text-align:center; }
+  .sidebar-section { font-size:10px; font-weight:700; letter-spacing:1px; color:var(--muted); padding:16px 20px 6px; text-transform:uppercase; }
+
+  /* Main */
+  .main { margin-left:220px; flex:1; display:flex; flex-direction:column; min-height:100vh; }
+  .topbar { display:flex; align-items:center; justify-content:space-between; padding:20px 32px; border-bottom:1px solid var(--border); background:var(--bg); position:sticky; top:0; z-index:10; }
+  .topbar h1 { font-size:20px; font-weight:700; }
+  .topbar-right { display:flex; align-items:center; gap:12px; }
+  .refresh-btn { display:flex; align-items:center; gap:7px; background:var(--surface); border:1px solid var(--border); color:var(--text); padding:8px 14px; border-radius:8px; font-size:13px; font-weight:500; cursor:pointer; transition:background .15s; }
+  .refresh-btn:hover { background:var(--surface2); }
+
+  /* Stats */
+  .stats-bar { display:flex; gap:16px; padding:20px 32px; border-bottom:1px solid var(--border); }
+  .stat-card { flex:1; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 20px; }
+  .stat-label { font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.8px; margin-bottom:6px; }
+  .stat-value { font-size:28px; font-weight:800; }
+
+  /* Content */
+  .content { padding:24px 32px; }
+  .section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+  .section-title { font-size:14px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.8px; }
+
+  /* Tabs */
+  .tabs { display:flex; gap:4px; margin-bottom:20px; }
+  .tab-btn { padding:8px 18px; border-radius:8px; border:none; background:transparent; color:var(--muted); font-size:13px; font-weight:600; cursor:pointer; transition:all .15s; }
+  .tab-btn.active { background:var(--surface); color:var(--text); }
+  .tab-btn:hover:not(.active) { color:var(--text); }
+  .tab-content { display:none; }
+  .tab-content.active { display:block; }
+
+  /* Articles */
+  .articles-grid { display:flex; flex-direction:column; gap:12px; }
+  .article-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:20px 24px; display:flex; align-items:flex-start; gap:20px; transition:border-color .15s; }
+  .article-card:hover { border-color:rgba(56,189,248,.3); }
+  .article-card.urgent { border-left:3px solid var(--red); }
+  .article-body { flex:1; min-width:0; }
+  .article-meta { display:flex; align-items:center; gap:8px; margin-bottom:8px; flex-wrap:wrap; }
+  .badge { font-size:10px; font-weight:700; padding:3px 9px; border-radius:20px; text-transform:uppercase; letter-spacing:.5px; }
+  .badge-critique { background:rgba(239,68,68,.15); color:#ef4444; }
+  .badge-eleve    { background:rgba(249,115,22,.15); color:#f97316; }
+  .badge-moyen    { background:rgba(234,179,8,.15);  color:#eab308; }
+  .badge-faible   { background:rgba(59,130,246,.15); color:#3b82f6; }
+  .tag { font-size:10px; font-weight:500; padding:3px 8px; border-radius:6px; background:rgba(255,255,255,.06); color:var(--muted); }
+  .article-time { font-size:11px; color:var(--muted); margin-left:auto; }
+  .article-title { font-size:15px; font-weight:700; line-height:1.3; margin-bottom:6px; }
+  .article-summary { font-size:13px; color:var(--muted); line-height:1.55; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .article-source { font-size:11px; color:var(--primary); margin-top:8px; opacity:.7; }
+  .article-actions { display:flex; flex-direction:column; gap:8px; flex-shrink:0; }
+  .btn-publish { display:flex; align-items:center; gap:6px; background:var(--green); color:#fff; border:none; padding:9px 16px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap; transition:opacity .15s; }
+  .btn-publish:hover { opacity:.85; }
+  .btn-publish:disabled { opacity:.4; cursor:default; }
+  .btn-reject { display:flex; align-items:center; gap:6px; background:transparent; color:var(--muted); border:1px solid var(--border); padding:8px 16px; border-radius:8px; font-size:13px; font-weight:500; cursor:pointer; white-space:nowrap; transition:all .15s; }
+  .btn-reject:hover { background:rgba(239,68,68,.1); color:var(--red); border-color:rgba(239,68,68,.3); }
+  .btn-reject:disabled { opacity:.4; cursor:default; }
+  .badge-published { background:rgba(34,197,94,.12); color:var(--green); font-size:10px; font-weight:600; padding:3px 9px; border-radius:20px; }
+  .publish-all-btn { display:flex; align-items:center; gap:6px; background:var(--green); color:#fff; border:none; padding:7px 14px; border-radius:7px; font-size:12px; font-weight:600; cursor:pointer; transition:opacity .15s; }
+  .publish-all-btn:hover { opacity:.85; }
+  .retranslate-btn { display:flex; align-items:center; gap:6px; background:var(--purple); color:#fff; border:none; padding:7px 14px; border-radius:7px; font-size:12px; font-weight:600; cursor:pointer; transition:opacity .15s; }
+  .retranslate-btn:hover { opacity:.85; }
+  .retranslate-btn:disabled { opacity:.4; cursor:default; }
+  .btn-retranslate-single { display:flex; align-items:center; gap:5px; background:transparent; color:var(--purple); border:1px solid rgba(168,85,247,.3); padding:7px 12px; border-radius:7px; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; transition:all .15s; }
+  .btn-retranslate-single:hover { background:rgba(168,85,247,.1); }
+  .btn-retranslate-single:disabled { opacity:.4; cursor:default; }
+  .reprocess-banner { background:rgba(168,85,247,.1); border:1px solid rgba(168,85,247,.25); border-radius:10px; padding:12px 16px; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .reprocess-banner p { font-size:13px; color:var(--text); }
+  .reprocess-banner span { color:var(--purple); font-weight:600; }
+  .progress-bar-wrap { background:rgba(255,255,255,.06); border-radius:4px; height:4px; flex:1; overflow:hidden; display:none; }
+  .progress-bar-fill { height:100%; background:var(--purple); border-radius:4px; transition:width .3s; width:0%; }
+
+  /* ── Sources ── */
+  .sources-toolbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; gap:12px; flex-wrap:wrap; }
+  .search-input { flex:1; min-width:200px; background:var(--surface); border:1px solid var(--border); color:var(--text); padding:9px 14px; border-radius:8px; font-size:13px; outline:none; }
+  .search-input::placeholder { color:var(--muted); }
+  .search-input:focus { border-color:var(--primary); }
+  .add-source-btn { display:flex; align-items:center; gap:6px; background:var(--primary); color:#0f172a; border:none; padding:9px 16px; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap; transition:opacity .15s; }
+  .add-source-btn:hover { opacity:.85; }
+
+  .category-group { margin-bottom:28px; }
+  .category-label { font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:1px; padding:8px 0 10px; border-bottom:1px solid var(--border); margin-bottom:10px; display:flex; align-items:center; gap:8px; }
+  .cat-count { background:rgba(255,255,255,.08); padding:2px 8px; border-radius:10px; font-size:10px; }
+
+  .source-row { display:flex; align-items:center; gap:16px; padding:12px 16px; background:var(--surface); border:1px solid var(--border); border-radius:10px; margin-bottom:8px; transition:border-color .15s; }
+  .source-row:hover { border-color:rgba(56,189,248,.25); }
+  .source-row.inactive { opacity:.45; }
+  .source-info { flex:1; min-width:0; }
+  .source-name { font-size:14px; font-weight:600; margin-bottom:2px; }
+  .source-url  { font-size:11px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+  /* Toggle switch */
+  .toggle { position:relative; width:40px; height:22px; flex-shrink:0; }
+  .toggle input { opacity:0; width:0; height:0; }
+  .toggle-slider { position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background:rgba(255,255,255,.15); border-radius:22px; transition:.25s; }
+  .toggle-slider:before { position:absolute; content:""; height:16px; width:16px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.25s; }
+  input:checked + .toggle-slider { background:var(--primary); }
+  input:checked + .toggle-slider:before { transform:translateX(18px); }
+
+  .btn-del-source { background:transparent; border:none; color:var(--muted); cursor:pointer; padding:6px; border-radius:6px; display:flex; transition:all .15s; }
+  .btn-del-source:hover { color:var(--red); background:rgba(239,68,68,.1); }
+  .btn-del-source svg { width:14px; height:14px; }
+
+  /* Modal */
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); backdrop-filter:blur(4px); display:none; align-items:center; justify-content:center; z-index:200; }
+  .modal-overlay.open { display:flex; }
+  .modal { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:28px; width:440px; max-width:90vw; }
+  .modal h2 { font-size:17px; font-weight:700; margin-bottom:20px; }
+  .form-field { margin-bottom:16px; }
+  .form-field label { display:block; font-size:12px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; margin-bottom:6px; }
+  .form-field input, .form-field select { width:100%; background:var(--bg); border:1px solid var(--border); color:var(--text); padding:10px 14px; border-radius:8px; font-size:14px; outline:none; }
+  .form-field input:focus, .form-field select:focus { border-color:var(--primary); }
+  .form-field select option { background:var(--surface); }
+  .modal-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:20px; }
+  .btn-cancel { background:transparent; border:1px solid var(--border); color:var(--muted); padding:9px 18px; border-radius:8px; font-size:13px; font-weight:500; cursor:pointer; }
+  .btn-confirm { background:var(--primary); color:#0f172a; border:none; padding:9px 18px; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; }
+
+  /* ── Reading panel ── */
+  .reader-overlay { position:fixed; inset:0; background:rgba(0,0,0,.45); backdrop-filter:blur(3px); z-index:150; display:none; }
+  .reader-overlay.open { display:block; }
+  .reader-panel {
+    position:fixed; top:0; right:0; bottom:0; width:520px; max-width:100vw;
+    background:var(--surface); border-left:1px solid var(--border);
+    display:flex; flex-direction:column;
+    transform:translateX(100%); transition:transform .25s cubic-bezier(.4,0,.2,1);
+    z-index:160;
+  }
+  .reader-panel.open { transform:translateX(0); }
+  .reader-header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:20px 24px; border-bottom:1px solid var(--border); flex-shrink:0;
+  }
+  .reader-header-left { display:flex; align-items:center; gap:10px; }
+  .reader-close { background:transparent; border:1px solid var(--border); color:var(--muted); width:32px; height:32px; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .15s; flex-shrink:0; }
+  .reader-close:hover { background:var(--surface2); color:var(--text); }
+  .reader-body { flex:1; overflow-y:auto; padding:28px 24px; }
+  .reader-title { font-size:20px; font-weight:800; line-height:1.3; color:var(--text); margin-bottom:16px; }
+  .reader-meta { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:20px; }
+  .reader-divider { height:1px; background:var(--border); margin:20px 0; }
+  .reader-label { font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.8px; margin-bottom:10px; }
+  .reader-summary { font-size:14px; line-height:1.75; color:rgba(241,245,249,.85); white-space:pre-wrap; }
+  .reader-tags { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+  .reader-source-link {
+    display:inline-flex; align-items:center; gap:6px;
+    color:var(--primary); font-size:13px; font-weight:500;
+    text-decoration:none; padding:8px 14px;
+    background:rgba(56,189,248,.08); border:1px solid rgba(56,189,248,.2);
+    border-radius:8px; transition:all .15s; margin-top:8px;
+  }
+  .reader-source-link:hover { background:rgba(56,189,248,.15); }
+  .reader-date { font-size:12px; color:var(--muted); margin-top:16px; }
+  .btn-read-in-page { display:inline-flex; align-items:center; gap:6px; color:var(--text); font-size:13px; font-weight:500; padding:8px 14px; background:rgba(255,255,255,.06); border:1px solid var(--border); border-radius:8px; cursor:pointer; transition:all .15s; margin-top:8px; margin-left:8px; }
+  .btn-read-in-page:hover { background:rgba(255,255,255,.1); }
+
+  /* ── Iframe Browser (lecteur interne) ── */
+  .iframe-browser { position:fixed; inset:0; background:var(--bg); z-index:200; display:flex; flex-direction:column; transform:translateY(100%); transition:transform .3s cubic-bezier(.4,0,.2,1); }
+  .iframe-browser.open { transform:translateY(0); }
+  .iframe-toolbar { display:flex; align-items:center; gap:10px; padding:12px 16px; background:var(--surface); border-bottom:1px solid var(--border); flex-shrink:0; }
+  .iframe-toolbar-url { flex:1; font-size:12px; color:var(--muted); overflow:hidden; white-space:nowrap; text-overflow:ellipsis; background:rgba(255,255,255,.04); border:1px solid var(--border); border-radius:6px; padding:5px 10px; }
+  .iframe-close { background:transparent; border:1px solid var(--border); color:var(--muted); width:32px; height:32px; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .iframe-close:hover { background:var(--surface2); color:var(--text); }
+  .iframe-ext { display:flex; align-items:center; gap:5px; color:var(--primary); font-size:12px; font-weight:600; text-decoration:none; padding:5px 10px; background:rgba(56,189,248,.08); border:1px solid rgba(56,189,248,.2); border-radius:6px; flex-shrink:0; transition:background .15s; }
+  .iframe-ext:hover { background:rgba(56,189,248,.15); }
+  .iframe-body { flex:1; position:relative; overflow:hidden; }
+  .iframe-body iframe { width:100%; height:100%; border:none; background:var(--bg); }
+  .iframe-blocked { position:absolute; inset:0; display:none; flex-direction:column; align-items:center; justify-content:center; gap:16px; color:var(--muted); }
+  .iframe-blocked.show { display:flex; }
+  .btn-open-external { display:inline-flex; align-items:center; gap:7px; background:var(--primary); color:var(--bg); padding:10px 20px; border-radius:10px; font-size:14px; font-weight:700; text-decoration:none; }
+
+  .reader-footer {
+    padding:16px 24px; border-top:1px solid var(--border);
+    display:flex; gap:10px; flex-shrink:0;
+  }
+  .reader-footer .btn-publish   { flex:1; justify-content:center; padding:11px; }
+  .reader-footer .btn-retranslate-single { padding:10px 14px; }
+  .reader-footer .btn-reject    { padding:10px 14px; }
+
+  /* card clickable hint */
+  .article-body { cursor:pointer; }
+  .article-body:hover .article-title { color:var(--primary); }
+  .article-body { transition:color .15s; }
+
+  /* Empty / Loading / Toast */
+  .empty { text-align:center; padding:60px 20px; color:var(--muted); }
+  .empty svg { width:40px; height:40px; opacity:.3; margin-bottom:16px; }
+  .empty p { font-size:14px; }
+  .spinner { display:flex; justify-content:center; align-items:center; padding:60px; }
+  .spin { width:32px; height:32px; border:3px solid var(--border); border-top-color:var(--primary); border-radius:50%; animation:spin .7s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  #toast { position:fixed; bottom:24px; right:24px; background:var(--surface2); border:1px solid var(--border); color:var(--text); padding:12px 18px; border-radius:10px; font-size:13px; font-weight:500; display:none; align-items:center; gap:8px; box-shadow:0 8px 24px rgba(0,0,0,.4); z-index:300; }
+  #toast.show { display:flex; }
+  #toast.success { border-color:rgba(34,197,94,.4); }
+  #toast.error   { border-color:rgba(239,68,68,.4); }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="sidebar-logo">Cyber<span>brief</span></div>
+  <div class="sidebar-section">Modération</div>
+  <a class="nav-item active" href="#" onclick="switchPage('drafts')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    Brouillons <span class="nav-badge" id="badge-draft">0</span>
+  </a>
+  <a class="nav-item" href="#" onclick="switchPage('published')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+    Publiés
+  </a>
+  <div class="sidebar-section">Configuration</div>
+  <a class="nav-item" href="#" onclick="switchPage('sources')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 19.07a10 10 0 0 1 0-14.14M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>
+    Sources RSS <span class="nav-badge" id="badge-sources" style="background:var(--primary);color:#0f172a">0</span>
+  </a>
+  <div class="sidebar-section" style="margin-top:auto"></div>
+  <a class="nav-item" href="#" onclick="loadAll()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+    Actualiser
+  </a>
+</aside>
+
+<!-- Main -->
+<div class="main">
+  <header class="topbar">
+    <h1 id="page-title">Brouillons d'alertes</h1>
+    <div class="topbar-right">
+      <span id="last-refresh" style="font-size:12px;color:var(--muted)"></span>
+      <button class="refresh-btn" onclick="loadAll()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        Actualiser
+      </button>
+    </div>
+  </header>
+
+  <!-- Stats -->
+  <div class="stats-bar">
+    <div class="stat-card"><div class="stat-label">Brouillons</div><div class="stat-value" id="count-draft" style="color:var(--orange)">—</div></div>
+    <div class="stat-card"><div class="stat-label">Publiés</div><div class="stat-value" id="count-published" style="color:var(--green)">—</div></div>
+    <div class="stat-card"><div class="stat-label">Critiques</div><div class="stat-value" id="count-critical" style="color:var(--red)">—</div></div>
+    <div class="stat-card"><div class="stat-label">Sources actives</div><div class="stat-value" id="count-sources" style="color:var(--primary)">—</div></div>
+  </div>
+
+  <div class="content">
+
+    <!-- ── Page Brouillons ── -->
+    <div id="page-drafts" class="tab-content active">
+      <div class="tabs">
+        <button class="tab-btn active" id="tab-btn-drafts"    onclick="switchTab('drafts')">Brouillons</button>
+        <button class="tab-btn"        id="tab-btn-published" onclick="switchTab('published')">Publiés</button>
+      </div>
+      <div id="tab-drafts" class="tab-content active">
+        <div class="section-header">
+          <span class="section-title">En attente de validation</span>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="retranslate-btn" id="reprocess-all-btn" onclick="reprocessAll()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></svg>
+              Tout traduire en FR
+            </button>
+            <button class="publish-all-btn" onclick="publishAll()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              Tout publier
+            </button>
+          </div>
+        </div>
+        <div id="reprocess-progress" style="display:none;margin-bottom:12px">
+          <div style="display:flex;align-items:center;gap:10px;background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.2);border-radius:8px;padding:10px 14px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2" style="flex-shrink:0"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></svg>
+            <span id="reprocess-status" style="font-size:13px;color:#a855f7;font-weight:500">Traduction en cours…</span>
+            <div class="progress-bar-wrap" id="progress-wrap" style="display:block"><div class="progress-bar-fill" id="progress-fill"></div></div>
+          </div>
+        </div>
+        <div id="drafts-list" class="articles-grid"><div class="spinner"><div class="spin"></div></div></div>
+      </div>
+      <div id="tab-published" class="tab-content">
+        <div class="section-header"><span class="section-title">Visible dans l'app Flutter</span></div>
+        <div id="published-list" class="articles-grid"><div class="spinner"><div class="spin"></div></div></div>
+      </div>
+    </div>
+
+    <!-- ── Page Sources ── -->
+    <div id="page-sources" class="tab-content">
+      <div class="sources-toolbar">
+        <input class="search-input" id="source-search" placeholder="Rechercher une source…" oninput="filterSources()" />
+        <button class="add-source-btn" onclick="openAddModal()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Ajouter une source
+        </button>
+      </div>
+      <div id="sources-list"><div class="spinner"><div class="spin"></div></div></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── Reading Panel ── -->
+<div class="reader-overlay" id="reader-overlay" onclick="closeReader()"></div>
+<div class="reader-panel" id="reader-panel">
+  <div class="reader-header">
+    <div class="reader-header-left">
+      <span id="rp-badge" class="badge"></span>
+      <span id="rp-time" style="font-size:12px;color:var(--muted)"></span>
+    </div>
+    <button class="reader-close" onclick="closeReader()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="reader-body">
+    <div class="reader-title" id="rp-title"></div>
+    <div class="reader-meta" id="rp-tags"></div>
+    <div class="reader-divider"></div>
+    <div class="reader-label">Résumé</div>
+    <div class="reader-summary" id="rp-summary"></div>
+    <div class="reader-divider"></div>
+    <div class="reader-label">Source originale</div>
+    <div style="display:flex;align-items:center;flex-wrap:wrap;gap:0">
+      <a class="reader-source-link" id="rp-link" href="#" target="_blank" rel="noopener">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        <span id="rp-domain"></span>
+      </a>
+      <button class="btn-read-in-page" id="rp-browser-btn" onclick="openIframeBrowser()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        Lire dans la page
+      </button>
+    </div>
+    <div class="reader-date" id="rp-date"></div>
+  </div>
+  <div class="reader-footer" id="rp-footer"></div>
+</div>
+
+<!-- ── Lecteur interne (Iframe Browser) ── -->
+<div class="iframe-browser" id="iframe-browser">
+  <div class="iframe-toolbar">
+    <button class="iframe-close" onclick="closeIframeBrowser()" title="Fermer">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <span class="iframe-toolbar-url" id="iframe-url-label">—</span>
+    <a class="iframe-ext" id="iframe-ext-link" href="#" target="_blank" rel="noopener" title="Ouvrir dans un nouvel onglet">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      Onglet
+    </a>
+  </div>
+  <div class="iframe-body">
+    <iframe id="iframe-content" sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-presentation" referrerpolicy="no-referrer"></iframe>
+    <div class="iframe-blocked" id="iframe-blocked">
+      <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" opacity=".25"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+      <p style="font-size:14px;font-weight:500">Ce site refuse d'être affiché en iframe.</p>
+      <p style="font-size:12px;margin-top:-8px">(<code>X-Frame-Options</code> ou <code>CSP frame-ancestors</code>)</p>
+      <a id="iframe-fallback-link" href="#" target="_blank" rel="noopener" class="btn-open-external">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        Ouvrir dans un nouvel onglet
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- Modal ajout source -->
+<div class="modal-overlay" id="add-modal">
+  <div class="modal">
+    <h2>Ajouter une source RSS</h2>
+    <div class="form-field">
+      <label>Nom affiché</label>
+      <input id="new-name" placeholder="ex: Bleeping Computer" />
+    </div>
+    <div class="form-field">
+      <label>URL du flux RSS</label>
+      <input id="new-url" placeholder="https://exemple.com/feed.xml" />
+    </div>
+    <div class="form-field">
+      <label>Catégorie</label>
+      <select id="new-category">
+        <option value="ACTUALITÉS">ACTUALITÉS</option>
+        <option value="THREAT INTEL">THREAT INTEL</option>
+        <option value="OFFICIEL">OFFICIEL</option>
+        <option value="FRANÇAIS">FRANÇAIS</option>
+        <option value="VULNÉRABILITÉS">VULNÉRABILITÉS</option>
+        <option value="CUSTOM">CUSTOM</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeAddModal()">Annuler</button>
+      <button class="btn-confirm" onclick="addSource()">Ajouter</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+let drafts = [], published = [], sources = [];
+let currentPage = 'drafts';
+
+// ── Utils ──────────────────────────────────────────────────────────────────
+
+function timeAgo(d) {
+  const s = (Date.now() - new Date(d)) / 1000;
+  if (s < 60) return `Il y a ${Math.floor(s)}s`;
+  if (s < 3600) return `Il y a ${Math.floor(s/60)} min`;
+  if (s < 86400) return `Il y a ${Math.floor(s/3600)}h`;
+  return `Il y a ${Math.floor(s/86400)}j`;
+}
+function sevBadge(c) {
+  const m = {'Critique':'critique','Critical':'critique','Élevé':'eleve','High':'eleve','Moyen':'moyen','Medium':'moyen','Faible':'faible','Low':'faible'};
+  return `<span class="badge badge-${m[c]||'faible'}">${c}</span>`;
+}
+function tagsHtml(t) {
+  return (t||'').split(',').map(s=>s.trim()).filter(Boolean).slice(0,4).map(s=>`<span class="tag">${s}</span>`).join('');
+}
+function toast(msg, type='success') {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className = `show ${type}`;
+  clearTimeout(el._t); el._t = setTimeout(()=>el.className='', 3000);
+}
+
+// ── Data ───────────────────────────────────────────────────────────────────
+
+async function loadAll() {
+  try {
+    const [dR, pR, sR] = await Promise.all([
+      fetch('/admin/drafts'), fetch('/api/articles'), fetch('/admin/sources')
+    ]);
+    drafts    = await dR.json();
+    published = await pR.json();
+    sources   = await sR.json();
+
+    const active = sources.filter(s=>s.active).length;
+    document.getElementById('count-draft').textContent     = drafts.length;
+    document.getElementById('count-published').textContent = published.length;
+    document.getElementById('count-critical').textContent  = drafts.filter(a=>a.criticality==='Critique'||a.criticality==='Critical').length;
+    document.getElementById('count-sources').textContent   = `${active}/${sources.length}`;
+    document.getElementById('badge-draft').textContent     = drafts.length;
+    document.getElementById('badge-sources').textContent   = sources.length;
+    document.getElementById('last-refresh').textContent    = 'Mis à jour ' + new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+
+    renderDrafts(); renderPublished(); renderSources();
+  } catch { toast('Impossible de joindre le serveur', 'error'); }
+}
+
+// ── Articles ───────────────────────────────────────────────────────────────
+
+function articleCard(a, isDraft) {
+  const urgent = a.criticality==='Critique'||a.criticality==='Critical';
+  let host = '';
+  try { host = new URL(a.url).hostname; } catch {}
+  return `<div class="article-card ${urgent&&isDraft?'urgent':''}" id="card-${a.id}">
+    <div class="article-body" onclick="openReader(${a.id})" title="Cliquer pour lire">
+      <div class="article-meta">${sevBadge(a.criticality)}${tagsHtml(a.tags)}${!isDraft?'<span class="badge-published">✓ Publié</span>':''}<span class="article-time">${timeAgo(a.createdAt)}</span></div>
+      <div class="article-title">${a.title}</div>
+      <div class="article-summary">${a.summary||'—'}</div>
+      ${host?`<div class="article-source">↗ ${host} &nbsp;·&nbsp; <span style="color:var(--muted)">Cliquer pour lire</span></div>`:''}
+    </div>
+    ${isDraft?`<div class="article-actions">
+      <button class="btn-publish" onclick="publishArticle(${a.id})" id="pub-${a.id}">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Publier
+      </button>
+      <button class="btn-retranslate-single" onclick="reprocessOne(${a.id})" id="rtr-${a.id}" title="Retraiter via Gemini">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></svg>FR
+      </button>
+      <button class="btn-reject" onclick="rejectArticle(${a.id})" id="rej-${a.id}">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Rejeter
+      </button>
+    </div>`:''}
+  </div>`;
+}
+function renderDrafts() {
+  const el = document.getElementById('drafts-list');
+  el.innerHTML = drafts.length ? drafts.map(a=>articleCard(a,true)).join('') :
+    `<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 12h6M9 16h6M9 8h2M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/></svg><p>Aucun brouillon</p></div>`;
+}
+function renderPublished() {
+  const el = document.getElementById('published-list');
+  el.innerHTML = published.length ? published.map(a=>articleCard(a,false)).join('') :
+    `<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="20 6 9 17 4 12"/></svg><p>Aucun article publié</p></div>`;
+}
+
+async function publishArticle(id) {
+  document.getElementById(`pub-${id}`).disabled = true;
+  document.getElementById(`rej-${id}`).disabled = true;
+  await fetch(`/admin/publish/${id}`, {method:'PATCH'});
+  const card = document.getElementById(`card-${id}`);
+  if (card) { card.style.opacity='0'; card.style.transition='opacity .3s'; }
+  setTimeout(loadAll, 400);
+  toast('Article publié dans l\'app ✓');
+}
+async function rejectArticle(id) {
+  document.getElementById(`rej-${id}`).disabled = true;
+  document.getElementById(`pub-${id}`).disabled = true;
+  await fetch(`/admin/reject/${id}`, {method:'DELETE'});
+  const card = document.getElementById(`card-${id}`);
+  if (card) { card.style.opacity='0'; card.style.transition='opacity .3s'; }
+  setTimeout(loadAll, 400);
+  toast('Article rejeté');
+}
+async function publishAll() {
+  if (!drafts.length) return;
+  if (!confirm(`Publier les ${drafts.length} brouillons ?`)) return;
+  for (const a of drafts) await fetch(`/admin/publish/${a.id}`, {method:'PATCH'});
+  toast(`${drafts.length} articles publiés ✓`);
+  loadAll();
+}
+
+async function reprocessOne(id) {
+  const btn = document.getElementById(`rtr-${id}`);
+  if (btn) { btn.disabled = true; btn.textContent = '…'; }
+  try {
+    const res = await fetch(`/admin/reprocess/${id}`, {method:'POST'});
+    if (!res.ok) throw new Error();
+    toast('Article traduit en français ✓');
+    await loadAll();
+  } catch {
+    toast('Erreur Gemini — quota peut-être dépassé', 'error');
+    if (btn) { btn.disabled = false; btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></svg>FR'; }
+  }
+}
+
+async function reprocessAll() {
+  if (!drafts.length) return;
+  const btn = document.getElementById('reprocess-all-btn');
+  btn.disabled = true;
+  document.getElementById('reprocess-progress').style.display = 'block';
+  document.getElementById('reprocess-status').textContent = `Traduction en cours… (0/${drafts.length})`;
+  document.getElementById('progress-fill').style.width = '0%';
+
+  try {
+    await fetch('/admin/reprocess-all', {method:'POST'});
+    // Poll DB pour suivre la progression
+    let prev = 0;
+    const poll = setInterval(async () => {
+      await loadAll();
+      // Heuristique : si les titres ont changé, c'est avancé
+      const pct = Math.min(100, Math.round((drafts.length - prev) / drafts.length * 100 + prev));
+      document.getElementById('progress-fill').style.width = pct + '%';
+      document.getElementById('reprocess-status').textContent = `Traduction Gemini en cours… (5s/article)`;
+    }, 6000);
+
+    // Durée estimée : drafts.length × 5s + 20s buffer
+    const eta = drafts.length * 5500 + 20000;
+    setTimeout(() => {
+      clearInterval(poll);
+      document.getElementById('reprocess-progress').style.display = 'none';
+      btn.disabled = false;
+      document.getElementById('progress-fill').style.width = '100%';
+      toast('Traduction terminée ✓');
+      loadAll();
+    }, eta);
+  } catch {
+    toast('Erreur lors du lancement', 'error');
+    btn.disabled = false;
+    document.getElementById('reprocess-progress').style.display = 'none';
+  }
+}
+
+// ── Sources ────────────────────────────────────────────────────────────────
+
+const CAT_COLORS = {
+  'FRANÇAIS':       '#38bdf8',
+  'OFFICIEL':       '#a855f7',
+  'ACTUALITÉS':     '#f97316',
+  'THREAT INTEL':   '#ef4444',
+  'VULNÉRABILITÉS': '#eab308',
+  'CUSTOM':         '#22c55e',
+};
+
+function renderSources(filter='') {
+  const el = document.getElementById('sources-list');
+  const q = filter.toLowerCase();
+  const filtered = sources.filter(s =>
+    !q || s.name.toLowerCase().includes(q) || s.url.toLowerCase().includes(q) || s.category.toLowerCase().includes(q)
+  );
+  if (!filtered.length) {
+    el.innerHTML = `<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><p>Aucune source trouvée</p></div>`;
+    return;
+  }
+  const byCategory = {};
+  for (const s of filtered) {
+    if (!byCategory[s.category]) byCategory[s.category] = [];
+    byCategory[s.category].push(s);
+  }
+  el.innerHTML = Object.entries(byCategory).map(([cat, items]) => {
+    const color = CAT_COLORS[cat] || '#64748b';
+    const rows = items.map(s => `
+      <div class="source-row ${s.active?'':'inactive'}" id="src-${s.id}">
+        <div class="source-info">
+          <div class="source-name">${s.name}</div>
+          <div class="source-url">${s.url}</div>
+        </div>
+        <label class="toggle" title="${s.active?'Désactiver':'Activer'}">
+          <input type="checkbox" ${s.active?'checked':''} onchange="toggleSource(${s.id})">
+          <span class="toggle-slider"></span>
+        </label>
+        <button class="btn-del-source" onclick="deleteSource(${s.id}, '${s.name.replace(/'/g,"\\'")}')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+        </button>
+      </div>`).join('');
+    return `<div class="category-group">
+      <div class="category-label" style="color:${color}">
+        ${cat} <span class="cat-count">${items.length}</span>
+        <span style="font-size:10px;color:var(--muted);font-weight:400;margin-left:4px">${items.filter(s=>s.active).length} actives</span>
+      </div>
+      ${rows}
+    </div>`;
+  }).join('');
+}
+
+function filterSources() {
+  renderSources(document.getElementById('source-search').value);
+}
+
+async function toggleSource(id) {
+  try {
+    const res = await fetch(`/admin/sources/${id}/toggle`, {method:'PATCH'});
+    const updated = await res.json();
+    const idx = sources.findIndex(s=>s.id===id);
+    if (idx !== -1) sources[idx] = updated;
+    renderSources(document.getElementById('source-search').value);
+    document.getElementById('count-sources').textContent =
+      `${sources.filter(s=>s.active).length}/${sources.length}`;
+    toast(updated.active ? `${updated.name} activée` : `${updated.name} désactivée`);
+  } catch { toast('Erreur', 'error'); }
+}
+
+async function deleteSource(id, name) {
+  if (!confirm(`Supprimer "${name}" définitivement ?`)) return;
+  await fetch(`/admin/sources/${id}`, {method:'DELETE'});
+  sources = sources.filter(s=>s.id!==id);
+  renderSources(document.getElementById('source-search').value);
+  document.getElementById('badge-sources').textContent = sources.length;
+  toast(`${name} supprimée`);
+}
+
+function openAddModal()  { document.getElementById('add-modal').classList.add('open'); }
+function closeAddModal() { document.getElementById('add-modal').classList.remove('open'); document.getElementById('new-name').value=''; document.getElementById('new-url').value=''; }
+
+async function addSource() {
+  const name     = document.getElementById('new-name').value.trim();
+  const url      = document.getElementById('new-url').value.trim();
+  const category = document.getElementById('new-category').value;
+  if (!name || !url) { toast('Nom et URL requis', 'error'); return; }
+  try {
+    const res = await fetch('/admin/sources', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name,url,category})});
+    if (res.status === 409) { toast('URL déjà existante', 'error'); return; }
+    if (!res.ok) throw new Error();
+    const src = await res.json();
+    sources.push(src);
+    renderSources();
+    document.getElementById('badge-sources').textContent = sources.length;
+    document.getElementById('count-sources').textContent = `${sources.filter(s=>s.active).length}/${sources.length}`;
+    closeAddModal();
+    toast(`${name} ajoutée ✓`);
+  } catch { toast('Erreur lors de l\'ajout', 'error'); }
+}
+
+// ── Reading Panel ─────────────────────────────────────────────────────────
+
+function openReader(id) {
+  const allArticles = [...drafts, ...published];
+  const a = allArticles.find(x => x.id === id);
+  if (!a) return;
+
+  const isDraft = a.status === 'DRAFT';
+
+  // Badge sévérité
+  const sevMap = {'Critique':'critique','Critical':'critique','Élevé':'eleve','High':'eleve','Moyen':'moyen','Medium':'moyen','Faible':'faible','Low':'faible'};
+  const sevEl = document.getElementById('rp-badge');
+  sevEl.textContent = a.criticality;
+  sevEl.className = `badge badge-${sevMap[a.criticality]||'faible'}`;
+
+  document.getElementById('rp-time').textContent = timeAgo(a.createdAt);
+  document.getElementById('rp-title').textContent = a.title;
+  document.getElementById('rp-summary').textContent = a.summary || '—';
+
+  // Tags
+  const tagsEl = document.getElementById('rp-tags');
+  tagsEl.innerHTML = (a.tags||'').split(',').map(t=>t.trim()).filter(Boolean)
+    .map(t=>`<span class="tag" style="font-size:12px;padding:4px 10px">${t}</span>`).join('');
+
+  // Source
+  let host = a.url;
+  try { host = new URL(a.url).hostname; } catch {}
+  const linkEl = document.getElementById('rp-link');
+  linkEl.href = a.url;
+  document.getElementById('rp-domain').textContent = host;
+
+  // Date
+  const d = new Date(a.createdAt);
+  document.getElementById('rp-date').textContent =
+    `Ingéré le ${d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})} à ${d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`;
+
+  // Footer actions
+  const footer = document.getElementById('rp-footer');
+  if (isDraft) {
+    footer.innerHTML = `
+      <button class="btn-publish" style="flex:1;justify-content:center;padding:11px" onclick="publishArticle(${a.id});closeReader()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        Publier dans l'app
+      </button>
+      <button class="btn-retranslate-single" onclick="reprocessOne(${a.id})" title="Retraiter via Gemini">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></svg>
+        FR
+      </button>
+      <button class="btn-reject" onclick="rejectArticle(${a.id});closeReader()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        Rejeter
+      </button>`;
+  } else {
+    footer.innerHTML = `
+      <span style="font-size:13px;color:var(--green);display:flex;align-items:center;gap:6px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        Publié dans l'app
+      </span>`;
+  }
+
+  document.getElementById('reader-overlay').classList.add('open');
+  document.getElementById('reader-panel').classList.add('open');
+}
+
+function closeReader() {
+  document.getElementById('reader-overlay').classList.remove('open');
+  document.getElementById('reader-panel').classList.remove('open');
+}
+
+// ── Lecteur interne (iframe) ───────────────────────────────────────────────
+
+let _iframeUrl = '';
+
+function openIframeBrowser() {
+  const url = document.getElementById('rp-link').href;
+  if (!url || url === '#') return;
+  _iframeUrl = url;
+
+  document.getElementById('iframe-url-label').textContent = url;
+  document.getElementById('iframe-ext-link').href = url;
+  document.getElementById('iframe-fallback-link').href = url;
+  document.getElementById('iframe-blocked').classList.remove('show');
+
+  const iframe = document.getElementById('iframe-content');
+  iframe.src = '';
+
+  // Timeout court pour détecter le blocage X-Frame-Options
+  // La plupart des sites bloqués provoquent une erreur silencieuse
+  let loaded = false;
+  iframe.onload = () => {
+    loaded = true;
+    try {
+      // Si cross-origin et bloqué, l'accès à contentDocument lève une exception
+      const doc = iframe.contentDocument || iframe.contentWindow.document;
+      if (!doc || !doc.body) throw new Error('empty');
+    } catch (e) {
+      // Site bloqué — afficher le fallback
+      document.getElementById('iframe-blocked').classList.add('show');
+    }
+  };
+  setTimeout(() => {
+    if (!loaded) document.getElementById('iframe-blocked').classList.add('show');
+  }, 8000);
+
+  iframe.src = url;
+  document.getElementById('iframe-browser').classList.add('open');
+  // Ferme le panneau latéral pour libérer l'espace
+  closeReader();
+}
+
+function closeIframeBrowser() {
+  document.getElementById('iframe-browser').classList.remove('open');
+  const iframe = document.getElementById('iframe-content');
+  // Stopper le chargement et vider
+  setTimeout(() => { iframe.src = ''; }, 300);
+}
+
+// Fermer avec Echap
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeIframeBrowser();
+    closeReader();
+  }
+});
+
+// ── Navigation ─────────────────────────────────────────────────────────────
+
+function switchPage(page) {
+  currentPage = page;
+  document.querySelectorAll('.tab-content[id^="page-"]').forEach(el => el.classList.remove('active'));
+  document.getElementById(`page-${page}`).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  const titles = { drafts:'Brouillons d\'alertes', published:'Articles publiés', sources:'Sources RSS' };
+  document.getElementById('page-title').textContent = titles[page] || page;
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('#page-drafts .tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('#page-drafts .tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById(`tab-${tab}`).classList.add('active');
+  document.getElementById(`tab-btn-${tab}`).classList.add('active');
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+loadAll();
+setInterval(loadAll, 30000);
+</script>
+</body>
+</html>
