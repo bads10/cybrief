@@ -117,7 +117,7 @@ class _StatsScreenState extends State<StatsScreen> {
               Text('Articles publiés', style: GoogleFonts.inter(
                 color: Colors.white.withValues(alpha: 0.85), fontSize: 13, fontWeight: FontWeight.w500,
               )),
-              const Icon(LucideIcons.barChart2, color: Colors.white, size: 20),
+              const Icon(LucideIcons.chartBarBig, color: Colors.white, size: 20),
             ],
           ),
           const SizedBox(height: 10),

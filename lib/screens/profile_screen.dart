@@ -40,10 +40,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             _buildSectionHeader('NOTIFICATIONS'),
             _buildCard([
-              _buildToggle(LucideIcons.alertOctagon, 'Alertes CRITIQUES', _notifCritique, const Color(0xFFEF4444),
+              _buildToggle(LucideIcons.octagonAlert, 'Alertes CRITIQUES', _notifCritique, const Color(0xFFEF4444),
                 (v) => setState(() => _notifCritique = v)),
               _buildDivider(),
-              _buildToggle(LucideIcons.alertTriangle, 'Alertes ÉLEVÉES', _notifEleve, const Color(0xFFF97316),
+              _buildToggle(LucideIcons.triangleAlert, 'Alertes ÉLEVÉES', _notifEleve, const Color(0xFFF97316),
                 (v) => setState(() => _notifEleve = v)),
               _buildDivider(),
               _buildToggle(LucideIcons.bell, 'Alertes MOYENNES', _notifMoyen, const Color(0xFFFBBF24),
