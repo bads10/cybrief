@@ -1,7 +1,7 @@
 require('dotenv').config();
 const path = require('path');
 const { execSync } = require('child_process');
-const { startRssCron } = require('./services/rss_cron');
+const { startRssCron, runAllFeeds } = require('./services/rss_cron');
 const express = require('express');
 const prisma = require('./services/prisma');
 
@@ -225,6 +225,16 @@ app.delete('/admin/reject/:id', async (req, res) => {
     try {
         await prisma.article.delete({ where: { id: parseInt(id) } });
         res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Déclencher manuellement l'ingestion RSS
+app.post('/admin/run-feeds', async (req, res) => {
+    try {
+        res.json({ success: true, message: 'Ingestion RSS lancée en arrière-plan' });
+        runAllFeeds().catch(err => console.error('[Cybrief] Erreur run-feeds:', err));
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
