@@ -98,10 +98,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _buildSectionHeader('À PROPOS'),
             _buildCard([
               _buildInfoRow(LucideIcons.info, 'Version', '1.0.0'),
-              _buildDivider(),
-              _buildInfoRow(LucideIcons.server, 'Backend', 'Railway · Production'),
-              _buildDivider(),
-              _buildInfoRow(LucideIcons.cpu, 'IA', 'Gemini 1.5 Flash'),
             ]),
             const SizedBox(height: 32),
 
