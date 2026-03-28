@@ -253,47 +253,7 @@ app.post('/admin/reprocess-all', async (req, res) => {
     }
 });
 
-// Retraduire TOUS les articles publiés en français via Gemini
-app.post('/admin/translate-all', async (req, res) => {
-    adminAuth(req, res, async () => {
-        try {
-            const articles = await prisma.article.findMany({ where: { status: 'PUBLISHED' } });
-            res.json({ message: `Traduction lancée pour ${articles.length} articles`, count: articles.length });
 
-            const { summarizeWithGemini } = require('./services/rss_cron');
-            const sleep = ms => new Promise(r => setTimeout(r, ms));
-            let done = 0;
-            for (const article of articles) {
-                try {
-                    const fakeItem = { title: article.title, link: article.url, contentSnippet: article.summary, content: article.summary };
-                    const ai = await summarizeWithGemini(fakeItem);
-                    await prisma.article.update({
-                        where: { id: article.id },
-                        data: {
-                            title:           ai.title           || article.title,
-                            summary:         ai.summary         || article.summary,
-                            criticality:     ai.severity        || article.criticality,
-                            tags:            ai.tags            || article.tags,
-                            cve:             ai.cve             || '',
-                            attackType:      ai.attackType      || '',
-                            affectedSystems: ai.affectedSystems || '',
-                            iocs:            ai.iocs            || '',
-                        },
-                    });
-                    done++;
-                    console.log(`[TranslateAll] ${done}/${articles.length} — ${(ai.title || article.title).slice(0, 60)}`);
-                    await sleep(5000);
-                } catch (e) {
-                    console.error(`[TranslateAll] Erreur article ${article.id}:`, e.message);
-                }
-            }
-            console.log(`[TranslateAll] Terminé — ${done}/${articles.length} articles traduits`);
-        } catch (error) {
-            res.status(500).json({ error: error.message });
-        }
-    });
-});
-ENDOFPATCH
 
 // Rejeter (supprimer) un brouillon
 app.delete('/admin/reject/:id', async (req, res) => {
@@ -335,6 +295,48 @@ app.post('/admin/bulk-reclassify', async (req, res) => {
         console.log(`[BulkReclassify] Terminé — ${articles.length} articles`);
     } catch (error) { console.error(error.message); }
 });
+
+// Retraduire TOUS les articles publiés en français via Gemini
+app.post('/admin/translate-all', async (req, res) => {
+    adminAuth(req, res, async () => {
+        try {
+            const articles = await prisma.article.findMany({ where: { status: 'PUBLISHED' } });
+            res.json({ message: `Traduction lancée pour ${articles.length} articles`, count: articles.length });
+
+            const { summarizeWithGemini } = require('./services/rss_cron');
+            const sleep = ms => new Promise(r => setTimeout(r, ms));
+            let done = 0;
+            for (const article of articles) {
+                try {
+                    const fakeItem = { title: article.title, link: article.url, contentSnippet: article.summary, content: article.summary };
+                    const ai = await summarizeWithGemini(fakeItem);
+                    await prisma.article.update({
+                        where: { id: article.id },
+                        data: {
+                            title:           ai.title           || article.title,
+                            summary:         ai.summary         || article.summary,
+                            criticality:     ai.severity        || article.criticality,
+                            tags:            ai.tags            || article.tags,
+                            cve:             ai.cve             || '',
+                            attackType:      ai.attackType      || '',
+                            affectedSystems: ai.affectedSystems || '',
+                            iocs:            ai.iocs            || '',
+                        },
+                    });
+                    done++;
+                    console.log(`[TranslateAll] ${done}/${articles.length} — ${(ai.title || article.title).slice(0, 60)}`);
+                    await sleep(5000);
+                } catch (e) {
+                    console.error(`[TranslateAll] Erreur article ${article.id}:`, e.message);
+                }
+            }
+            console.log(`[TranslateAll] Terminé — ${done}/${articles.length} articles traduits`);
+        } catch (error) {
+            res.status(500).json({ error: error.message });
+        }
+    });
+});
+ENDOFPATCH
 
 app.listen(PORT, () => {
     console.log(`\n🚀 Cybrief Backend — http://localhost:${PORT}`);
