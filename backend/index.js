@@ -336,3 +336,11 @@ app.post('/admin/translate-all', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
+
+app.listen(PORT, () => {
+    console.log(`\n🚀 Cybrief Backend — http://localhost:${PORT}`);
+    console.log(`📋 Dashboard Admin  — http://localhost:${PORT}/admin\n`);
+});
+
+startRssCron();
