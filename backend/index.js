@@ -336,7 +336,6 @@ app.post('/admin/translate-all', async (req, res) => {
         }
     });
 });
-ENDOFPATCH
 
 app.listen(PORT, () => {
     console.log(`\n🚀 Cybrief Backend — http://localhost:${PORT}`);
