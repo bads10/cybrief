@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.cybrief"
+    namespace = "com.orcusium.cybrief"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 

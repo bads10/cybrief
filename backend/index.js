@@ -275,6 +275,24 @@ app.post('/admin/run-feeds', async (req, res) => {
 });
 
 // ── Start ─────────────────────────────────────────────────────────────────
+app.post('/admin/bulk-reclassify', async (req, res) => {
+    const { articles } = req.body;
+    if (!Array.isArray(articles)) return res.status(400).json({ error: 'articles[] requis' });
+    try {
+        res.json({ message: `Reclassification lancée pour ${articles.length} articles` });
+        const sleep = ms => new Promise(r => setTimeout(r, ms));
+        for (const a of articles) {
+            try {
+                await prisma.article.update({
+                    where: { id: a.id },
+                    data: { criticality: a.criticality || 'Moyen', tags: a.tags || 'Veille Cyber', cve: a.cve || '', attackType: a.attackType || '' }
+                });
+            } catch(e) {}
+            await sleep(50);
+        }
+        console.log(`[BulkReclassify] Terminé — ${articles.length} articles`);
+    } catch (error) { console.error(error.message); }
+});
 
 app.listen(PORT, () => {
     console.log(`\n🚀 Cybrief Backend — http://localhost:${PORT}`);
