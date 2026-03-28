@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../services/auth_service.dart';
 import '../widgets/custom_bottom_nav_bar.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -12,10 +13,25 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   bool _notifCritique = true;
-  bool _notifEleve = true;
-  bool _notifMoyen = false;
-  bool _twoFactor = true;
-  bool _darkMode = true;
+  bool _notifEleve    = true;
+  bool _notifMoyen    = false;
+  bool _twoFactor     = true;
+  bool _darkMode      = true;
+
+  // ── Données utilisateur depuis Supabase ───────────────────────────────────
+  String get _displayName {
+    final user = AuthService.currentUser;
+    if (user == null) return 'Visiteur';
+    final name = user.userMetadata?['full_name'] as String?;
+    if (name != null && name.isNotEmpty) return name;
+    return user.email?.split('@').first ?? 'Utilisateur';
+  }
+
+  String get _displayEmail {
+    return AuthService.currentUser?.email ?? 'Non connecté';
+  }
+
+  bool get _isLoggedIn => AuthService.isLoggedIn;
 
   @override
   Widget build(BuildContext context) {
@@ -45,20 +61,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
             // ── Compte ──────────────────────────────────────────
             _buildSectionHeader('COMPTE'),
             _buildCard([
-              _buildNavRow(LucideIcons.user, 'Modifier le profil', null, onTap: _showEditProfile),
-              _buildDivider(),
-              _buildNavRow(LucideIcons.mail, 'E-mail', 'utilisateur@cybrief.fr'),
-              _buildDivider(),
-              _buildNavRow(LucideIcons.logIn, 'Connexion / Inscription', null,
-                  onTap: () => Navigator.pushNamed(context, '/login')),
+              if (_isLoggedIn) ...[
+                _buildNavRow(LucideIcons.user, 'Modifier le profil', null, onTap: _showEditProfile),
+                _buildDivider(),
+                _buildNavRow(LucideIcons.mail, 'E-mail', _displayEmail),
+                _buildDivider(),
+                _buildNavRow(LucideIcons.keyRound, 'Changer le mot de passe', null, onTap: _showChangePassword),
+              ] else
+                _buildNavRow(LucideIcons.logIn, 'Connexion / Inscription', null,
+                    onTap: () => Navigator.pushNamed(context, '/login')),
             ]),
             const SizedBox(height: 24),
 
             // ── Sécurité ─────────────────────────────────────────
             _buildSectionHeader('SÉCURITÉ'),
             _buildCard([
-              _buildNavRow(LucideIcons.keyRound, 'Changer le mot de passe', null, onTap: _showChangePassword),
-              _buildDivider(),
               _buildToggle(LucideIcons.shieldCheck, 'Double authentification', _twoFactor,
                   const Color(0xFF22C55E), (v) => setState(() => _twoFactor = v)),
             ]),
@@ -101,8 +118,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ]),
             const SizedBox(height: 32),
 
-            // ── Déconnexion ──────────────────────────────────────
-            _buildLogoutButton(),
+            // ── Bouton déconnexion / connexion ───────────────────
+            if (_isLoggedIn)
+              _buildLogoutButton()
+            else
+              _buildLoginButton(),
             const SizedBox(height: 16),
           ],
         ),
@@ -139,7 +159,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: Container(
                   width: 20, height: 20,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF22C55E),
+                    color: _isLoggedIn ? const Color(0xFF22C55E) : Colors.grey,
                     shape: BoxShape.circle,
                     border: Border.all(color: const Color(0xFF0F172A), width: 2),
                   ),
@@ -152,27 +172,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Utilisateur Cybrief', style: GoogleFonts.inter(
+                Text(_displayName, style: GoogleFonts.inter(
                   fontSize: 17, fontWeight: FontWeight.bold, color: Colors.white,
                 )),
                 const SizedBox(height: 2),
-                Text('utilisateur@cybrief.fr', style: GoogleFonts.inter(
+                Text(_displayEmail, style: GoogleFonts.inter(
                   fontSize: 13, color: Colors.white.withValues(alpha: 0.5),
                 )),
               ],
             ),
           ),
-          GestureDetector(
-            onTap: _showEditProfile,
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.06),
-                borderRadius: BorderRadius.circular(8),
+          if (_isLoggedIn)
+            GestureDetector(
+              onTap: _showEditProfile,
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(LucideIcons.pencil, size: 16, color: Colors.white.withValues(alpha: 0.6)),
               ),
-              child: Icon(LucideIcons.pencil, size: 16, color: Colors.white.withValues(alpha: 0.6)),
             ),
-          ),
         ],
       ),
     );
@@ -324,7 +345,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       width: double.infinity,
       height: 52,
       child: OutlinedButton.icon(
-        onPressed: () => Navigator.pushReplacementNamed(context, '/'),
+        onPressed: _logout,
         icon: const Icon(LucideIcons.logOut, color: Color(0xFFEF4444), size: 18),
         label: Text('Se déconnecter', style: GoogleFonts.inter(
           fontSize: 15, fontWeight: FontWeight.bold, color: const Color(0xFFEF4444),
@@ -335,6 +356,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildLoginButton() {
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: ElevatedButton.icon(
+        onPressed: () => Navigator.pushNamed(context, '/login'),
+        icon: const Icon(LucideIcons.logIn, size: 18),
+        label: Text('Se connecter', style: GoogleFonts.inter(
+          fontSize: 15, fontWeight: FontWeight.bold,
+        )),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF135BEC),
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _logout() async {
+    await AuthService.signOut();
+    if (!mounted) return;
+    Navigator.pushReplacementNamed(context, '/');
   }
 
   // ── Modals ──────────────────────────────────────────────────────
@@ -464,11 +510,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white,
               )),
               const SizedBox(height: 20),
-              _buildTextField('Nom complet', 'Utilisateur Cybrief', LucideIcons.user),
+              _buildModalTextField('Nom complet', _displayName, LucideIcons.user),
               const SizedBox(height: 14),
-              _buildTextField('E-mail', 'utilisateur@cybrief.fr', LucideIcons.mail),
+              _buildModalTextField('E-mail', _displayEmail, LucideIcons.mail),
               const SizedBox(height: 14),
-              _buildTextField('Entreprise', 'Mon Entreprise', LucideIcons.building2),
+              _buildModalTextField('Entreprise', 'Mon Entreprise', LucideIcons.building2),
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
@@ -490,7 +536,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildTextField(String label, String hint, IconData icon) {
+  Widget _buildModalTextField(String label, String hint, IconData icon) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -550,11 +596,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white,
               )),
               const SizedBox(height: 20),
-              _buildTextField('Mot de passe actuel', '••••••••••', LucideIcons.lock),
+              _buildModalTextField('Mot de passe actuel', '••••••••••', LucideIcons.lock),
               const SizedBox(height: 14),
-              _buildTextField('Nouveau mot de passe', '••••••••••', LucideIcons.lockOpen),
+              _buildModalTextField('Nouveau mot de passe', '••••••••••', LucideIcons.lockOpen),
               const SizedBox(height: 14),
-              _buildTextField('Confirmer le mot de passe', '••••••••••', LucideIcons.shieldCheck),
+              _buildModalTextField('Confirmer le mot de passe', '••••••••••', LucideIcons.shieldCheck),
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,

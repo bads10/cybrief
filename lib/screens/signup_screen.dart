@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../services/auth_service.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -10,7 +11,96 @@ class SignupScreen extends StatefulWidget {
 }
 
 class _SignupScreenState extends State<SignupScreen> {
-  bool _receiveDaily = true;
+  final _nameCtrl     = TextEditingController();
+  final _emailCtrl    = TextEditingController();
+  final _passwordCtrl = TextEditingController();
+  bool _receiveDaily  = true;
+  bool _loading       = false;
+  bool _showPassword  = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _emailCtrl.dispose();
+    _passwordCtrl.dispose();
+    super.dispose();
+  }
+
+  // ── Force du mot de passe (0‑4) ─────────────────────────────────────────
+  int get _passwordStrength {
+    final p = _passwordCtrl.text;
+    if (p.isEmpty) return 0;
+    int score = 0;
+    if (p.length >= 8)                          score++;
+    if (p.contains(RegExp(r'[A-Z]')))           score++;
+    if (p.contains(RegExp(r'[0-9]')))           score++;
+    if (p.contains(RegExp(r'[!@#\$&*~%^()_]'))) score++;
+    return score;
+  }
+
+  String get _strengthLabel {
+    switch (_passwordStrength) {
+      case 0: return '';
+      case 1: return 'Faible';
+      case 2: return 'Moyen';
+      case 3: return 'Fort';
+      default: return 'Très fort';
+    }
+  }
+
+  Color get _strengthColor {
+    switch (_passwordStrength) {
+      case 1: return const Color(0xFFEF4444);
+      case 2: return const Color(0xFFFBBF24);
+      case 3: return const Color(0xFF22C55E);
+      default: return const Color(0xFF38BDF8);
+    }
+  }
+
+  Future<void> _signup() async {
+    final name     = _nameCtrl.text.trim();
+    final email    = _emailCtrl.text.trim();
+    final password = _passwordCtrl.text;
+
+    if (name.isEmpty || email.isEmpty || password.isEmpty) {
+      setState(() => _error = 'Remplis tous les champs.');
+      return;
+    }
+    if (password.length < 6) {
+      setState(() => _error = 'Le mot de passe doit contenir au moins 6 caractères.');
+      return;
+    }
+
+    setState(() { _loading = true; _error = null; });
+
+    final result = await AuthService.signUp(
+      email: email,
+      password: password,
+      fullName: name,
+    );
+
+    if (!mounted) return;
+    setState(() => _loading = false);
+
+    if (result.success) {
+      // Supabase envoie un email de confirmation — on informe l'utilisateur
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Compte créé ! Vérifie ton email pour confirmer ton inscription.',
+            style: GoogleFonts.inter(),
+          ),
+          backgroundColor: const Color(0xFF22C55E),
+          duration: const Duration(seconds: 5),
+        ),
+      );
+      Navigator.pushReplacementNamed(context, '/feed');
+    } else {
+      setState(() => _error = result.error);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -49,20 +139,53 @@ class _SignupScreenState extends State<SignupScreen> {
                 ),
               ),
               const SizedBox(height: 40),
+
+              // ── Nom complet ──────────────────────────────────────────────
               _buildFieldLabel('Nom complet'),
               const SizedBox(height: 8),
-              _buildTextField('Ex: Jean Dupont', false),
+              _buildTextField(
+                controller: _nameCtrl,
+                hint: 'Ex: Jean Dupont',
+                isPassword: false,
+                keyboardType: TextInputType.name,
+              ),
               const SizedBox(height: 24),
+
+              // ── Email ────────────────────────────────────────────────────
               _buildFieldLabel('E-mail professionnel'),
               const SizedBox(height: 8),
-              _buildTextField('nom@entreprise.com', false),
+              _buildTextField(
+                controller: _emailCtrl,
+                hint: 'nom@entreprise.com',
+                isPassword: false,
+                keyboardType: TextInputType.emailAddress,
+              ),
               const SizedBox(height: 24),
+
+              // ── Mot de passe ─────────────────────────────────────────────
               _buildFieldLabel('Mot de passe'),
               const SizedBox(height: 8),
-              _buildTextField('Min. 8 caractères', true),
+              _buildTextField(
+                controller: _passwordCtrl,
+                hint: 'Min. 6 caractères',
+                isPassword: !_showPassword,
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _showPassword ? LucideIcons.eyeOff : LucideIcons.eye,
+                    color: Colors.white.withValues(alpha: 0.3),
+                    size: 20,
+                  ),
+                  onPressed: () => setState(() => _showPassword = !_showPassword),
+                ),
+                onChanged: (_) => setState(() {}),
+              ),
               const SizedBox(height: 12),
-              _buildPasswordStrength(),
+
+              // ── Indicateur force mot de passe ────────────────────────────
+              if (_passwordCtrl.text.isNotEmpty) _buildPasswordStrength(),
               const SizedBox(height: 24),
+
+              // ── Checkbox résumé quotidien ────────────────────────────────
               Row(
                 children: [
                   SizedBox(
@@ -88,11 +211,46 @@ class _SignupScreenState extends State<SignupScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 48),
+
+              // ── Message d'erreur ─────────────────────────────────────────
+              if (_error != null) ...[
+                const SizedBox(height: 16),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEF4444).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: const Color(0xFFEF4444).withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(LucideIcons.circleAlert,
+                          size: 16, color: Color(0xFFEF4444)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _error!,
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            color: const Color(0xFFEF4444),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
+              const SizedBox(height: 32),
+
+              // ── Bouton inscription ───────────────────────────────────────
               ElevatedButton(
-                onPressed: () => Navigator.pushReplacementNamed(context, '/feed'),
+                onPressed: _loading ? null : _signup,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF135BEC), // Blue from Stitch
+                  backgroundColor: const Color(0xFF135BEC),
                   foregroundColor: Colors.white,
                   minimumSize: const Size(double.infinity, 60),
                   shape: RoundedRectangleBorder(
@@ -100,22 +258,33 @@ class _SignupScreenState extends State<SignupScreen> {
                   ),
                   elevation: 0,
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'Créer mon compte',
-                      style: GoogleFonts.inter(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                child: _loading
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            'Créer mon compte',
+                            style: GoogleFonts.inter(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          const Icon(LucideIcons.chevronRight, size: 20),
+                        ],
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Icon(LucideIcons.chevronRight, size: 20),
-                  ],
-                ),
               ),
               const SizedBox(height: 32),
+
+              // ── CGU ──────────────────────────────────────────────────────
               Center(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -163,9 +332,19 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  Widget _buildTextField(String hint, bool isPassword) {
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String hint,
+    required bool isPassword,
+    TextInputType? keyboardType,
+    Widget? suffixIcon,
+    ValueChanged<String>? onChanged,
+  }) {
     return TextField(
+      controller: controller,
       obscureText: isPassword,
+      keyboardType: keyboardType,
+      onChanged: onChanged,
       style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
         hintText: hint,
@@ -180,44 +359,44 @@ class _SignupScreenState extends State<SignupScreen> {
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.05)),
         ),
-        suffixIcon: isPassword ? Icon(LucideIcons.eyeOff, color: Colors.white.withValues(alpha: 0.3), size: 20) : null,
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFF38BDF8), width: 1),
+        ),
+        suffixIcon: suffixIcon,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       ),
     );
   }
 
   Widget _buildPasswordStrength() {
+    final strength = _passwordStrength;
     return Row(
       children: [
-        _buildStrengthBar(true),
-        const SizedBox(width: 4),
-        _buildStrengthBar(true),
-        const SizedBox(width: 4),
-        _buildStrengthBar(false),
-        const SizedBox(width: 4),
-        _buildStrengthBar(false),
+        for (int i = 1; i <= 4; i++) ...[
+          Expanded(
+            child: Container(
+              height: 4,
+              decoration: BoxDecoration(
+                color: i <= strength
+                    ? _strengthColor
+                    : Colors.white.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          if (i < 4) const SizedBox(width: 4),
+        ],
         const SizedBox(width: 12),
         Text(
-          'Moyen',
+          _strengthLabel,
           style: GoogleFonts.inter(
             fontSize: 12,
             fontWeight: FontWeight.bold,
-            color: Colors.white.withValues(alpha: 0.4),
+            color: _strengthColor,
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildStrengthBar(bool isActive) {
-    return Expanded(
-      child: Container(
-        height: 4,
-        decoration: BoxDecoration(
-          color: isActive ? Colors.greenAccent : Colors.white.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(2),
-        ),
-      ),
     );
   }
 }

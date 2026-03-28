@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screens/login_screen.dart';
 import 'screens/threat_feed_screen.dart';
 import 'screens/threat_detail_screen.dart';
@@ -10,7 +11,21 @@ import 'screens/notifications_screen.dart';
 import 'screens/categories_screen.dart';
 import 'screens/stats_screen.dart';
 
-void main() {
+// ─────────────────────────────────────────────────────────────────────────────
+// Remplace ces deux valeurs par tes vraies clés Supabase CyBrief
+// (Settings → API dans le dashboard Supabase)
+// ─────────────────────────────────────────────────────────────────────────────
+const String _supabaseUrl     = 'https://ghtblyjyusljdyjbxohd.supabase.co';
+const String _supabaseAnonKey = 'sb_publishable_dPb7e5HKcK8Yr52_ANyesA_BOj-RC7S';
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Supabase.initialize(
+    url: _supabaseUrl,
+    anonKey: _supabaseAnonKey,
+  );
+
   runApp(const CybriefApp());
 }
 
@@ -62,7 +77,7 @@ class WelcomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A191E), // Darker teal/black
+      backgroundColor: const Color(0xFF0A191E),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 40.0),
@@ -113,10 +128,11 @@ class WelcomeScreen extends StatelessWidget {
                 ),
               ),
               const Spacer(),
+              // ── Bouton principal → /login ──────────────────────────────
               ElevatedButton(
-                onPressed: () => Navigator.pushNamed(context, '/feed'),
+                onPressed: () => Navigator.pushNamed(context, '/login'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF12A9C9), // Teal/Cyan button
+                  backgroundColor: const Color(0xFF12A9C9),
                   foregroundColor: const Color(0xFF0A191E),
                   minimumSize: const Size(double.infinity, 64),
                   shape: RoundedRectangleBorder(
@@ -133,8 +149,9 @@ class WelcomeScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 24),
+              // ── Accès direct sans compte ───────────────────────────────
               TextButton(
-                onPressed: () {},
+                onPressed: () => Navigator.pushNamed(context, '/feed'),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [

@@ -1,9 +1,71 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../services/auth_service.dart';
 
-class LoginScreen extends StatelessWidget {
+class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final _emailCtrl    = TextEditingController();
+  final _passwordCtrl = TextEditingController();
+  bool _loading       = false;
+  bool _showPassword  = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _emailCtrl.dispose();
+    _passwordCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _login() async {
+    final email    = _emailCtrl.text.trim();
+    final password = _passwordCtrl.text;
+
+    if (email.isEmpty || password.isEmpty) {
+      setState(() => _error = 'Remplis tous les champs.');
+      return;
+    }
+
+    setState(() { _loading = true; _error = null; });
+
+    final result = await AuthService.signIn(email: email, password: password);
+
+    if (!mounted) return;
+    setState(() => _loading = false);
+
+    if (result.success) {
+      Navigator.pushReplacementNamed(context, '/feed');
+    } else {
+      setState(() => _error = result.error);
+    }
+  }
+
+  Future<void> _forgotPassword() async {
+    final email = _emailCtrl.text.trim();
+    if (email.isEmpty) {
+      setState(() => _error = 'Entre ton email d\'abord.');
+      return;
+    }
+    setState(() { _loading = true; _error = null; });
+    final result = await AuthService.resetPassword(email);
+    if (!mounted) return;
+    setState(() => _loading = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(result.message ?? result.error ?? ''),
+        backgroundColor: result.success
+            ? const Color(0xFF22C55E)
+            : const Color(0xFFEF4444),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -21,11 +83,7 @@ class LoginScreen extends StatelessWidget {
                   color: Colors.white.withValues(alpha: 0.05),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
-                  LucideIcons.lock,
-                  size: 32,
-                  color: Colors.white,
-                ),
+                child: const Icon(LucideIcons.lock, size: 32, color: Colors.white),
               ),
               const SizedBox(height: 32),
               Text(
@@ -45,54 +103,42 @@ class LoginScreen extends StatelessWidget {
                   color: Colors.white.withValues(alpha: 0.5),
                 ),
               ),
-              const SizedBox(height: 32),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _socialButton(
-                    onPressed: () {},
-                    icon: Icons.apple,
-                    label: 'Apple',
-                  ),
-                  const SizedBox(width: 20),
-                  _socialButton(
-                    onPressed: () {},
-                    icon: Icons.g_mobiledata,
-                    label: 'Google',
-                  ),
-                ],
-              ),
-              const SizedBox(height: 32),
-              Row(
-                children: [
-                  Expanded(child: Divider(color: Colors.white.withValues(alpha: 0.1))),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text(
-                      'OU',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white.withValues(alpha: 0.2),
-                      ),
-                    ),
-                  ),
-                  Expanded(child: Divider(color: Colors.white.withValues(alpha: 0.1))),
-                ],
-              ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 40),
+
+              // ── Champ email ────────────────────────────────────────────
               _buildFieldLabel('E-MAIL PROFESSIONNEL'),
               const SizedBox(height: 12),
-              _buildTextField('nom@entreprise.com', false),
-              const SizedBox(height: 32),
+              _buildTextField(
+                controller: _emailCtrl,
+                hint: 'nom@entreprise.com',
+                isPassword: false,
+                keyboardType: TextInputType.emailAddress,
+              ),
+              const SizedBox(height: 24),
+
+              // ── Champ mot de passe ─────────────────────────────────────
               _buildFieldLabel('MOT DE PASSE'),
               const SizedBox(height: 12),
-              _buildTextField('••••••••••••', true),
-              const SizedBox(height: 12),
+              _buildTextField(
+                controller: _passwordCtrl,
+                hint: '••••••••••••',
+                isPassword: !_showPassword,
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _showPassword ? LucideIcons.eyeOff : LucideIcons.eye,
+                    color: Colors.white.withValues(alpha: 0.3),
+                    size: 20,
+                  ),
+                  onPressed: () => setState(() => _showPassword = !_showPassword),
+                ),
+              ),
+              const SizedBox(height: 8),
+
+              // ── Mot de passe oublié ────────────────────────────────────
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
-                  onPressed: () {},
+                  onPressed: _loading ? null : _forgotPassword,
                   child: Text(
                     'Mot de passe oublié ?',
                     style: GoogleFonts.inter(
@@ -103,9 +149,44 @@ class LoginScreen extends StatelessWidget {
                   ),
                 ),
               ),
+
+              // ── Message d'erreur ───────────────────────────────────────
+              if (_error != null) ...[
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEF4444).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: const Color(0xFFEF4444).withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(LucideIcons.circleAlert,
+                          size: 16, color: Color(0xFFEF4444)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _error!,
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            color: const Color(0xFFEF4444),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
               const SizedBox(height: 32),
+
+              // ── Bouton connexion ───────────────────────────────────────
               ElevatedButton(
-                onPressed: () => Navigator.pushReplacementNamed(context, '/feed'),
+                onPressed: _loading ? null : _login,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
                   foregroundColor: const Color(0xFF0A191E),
@@ -115,15 +196,41 @@ class LoginScreen extends StatelessWidget {
                   ),
                   elevation: 0,
                 ),
+                child: _loading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Color(0xFF0A191E),
+                        ),
+                      )
+                    : Text(
+                        'Se connecter',
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // ── Continuer sans compte ──────────────────────────────────
+              TextButton(
+                onPressed: () => Navigator.pushReplacementNamed(context, '/feed'),
                 child: Text(
-                  'Se connecter',
+                  'Continuer sans compte →',
                   style: GoogleFonts.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: Colors.white.withValues(alpha: 0.35),
                   ),
                 ),
               ),
-              const SizedBox(height: 60),
+
+              const SizedBox(height: 40),
+
+              // ── Lien inscription ───────────────────────────────────────
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -170,13 +277,22 @@ class LoginScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTextField(String hint, bool isPassword) {
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String hint,
+    required bool isPassword,
+    TextInputType? keyboardType,
+    Widget? suffixIcon,
+  }) {
     return TextField(
+      controller: controller,
       obscureText: isPassword,
+      keyboardType: keyboardType,
       style: const TextStyle(color: Colors.white),
+      onSubmitted: (_) => _login(),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.1)),
+        hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.15)),
         filled: true,
         fillColor: Colors.white.withValues(alpha: 0.03),
         border: OutlineInputBorder(
@@ -187,42 +303,13 @@ class LoginScreen extends StatelessWidget {
           borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.05)),
         ),
-        suffixIcon: isPassword ? Icon(LucideIcons.eye, color: Colors.white.withValues(alpha: 0.3), size: 20) : null,
-      ),
-    );
-  }
-
-  Widget _socialButton({
-    required VoidCallback onPressed,
-    required IconData icon,
-    required String label,
-  }) {
-    return InkWell(
-      onTap: onPressed,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        width: 120,
-        height: 56,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-          color: Colors.white.withValues(alpha: 0.02),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFF38BDF8), width: 1),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: Colors.white, size: 20),
-            const SizedBox(width: 10),
-            Text(
-              label,
-              style: GoogleFonts.inter(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-                fontSize: 14,
-              ),
-            ),
-          ],
-        ),
+        suffixIcon: suffixIcon,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
       ),
     );
   }
