@@ -16,6 +16,7 @@ class _SignupScreenState extends State<SignupScreen> {
   final _passwordCtrl = TextEditingController();
   bool _receiveDaily  = true;
   bool _loading       = false;
+  bool _loadingGoogle = false;
   bool _showPassword  = false;
   String? _error;
 
@@ -27,7 +28,6 @@ class _SignupScreenState extends State<SignupScreen> {
     super.dispose();
   }
 
-  // ── Force du mot de passe (0‑4) ─────────────────────────────────────────
   int get _passwordStrength {
     final p = _passwordCtrl.text;
     if (p.isEmpty) return 0;
@@ -84,7 +84,6 @@ class _SignupScreenState extends State<SignupScreen> {
     setState(() => _loading = false);
 
     if (result.success) {
-      // Supabase envoie un email de confirmation — on informe l'utilisateur
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -96,6 +95,21 @@ class _SignupScreenState extends State<SignupScreen> {
           duration: const Duration(seconds: 5),
         ),
       );
+      Navigator.pushReplacementNamed(context, '/feed');
+    } else {
+      setState(() => _error = result.error);
+    }
+  }
+
+  Future<void> _signupWithGoogle() async {
+    setState(() { _loadingGoogle = true; _error = null; });
+
+    final result = await AuthService.signInWithGoogle();
+
+    if (!mounted) return;
+    setState(() => _loadingGoogle = false);
+
+    if (result.success) {
       Navigator.pushReplacementNamed(context, '/feed');
     } else {
       setState(() => _error = result.error);
@@ -138,7 +152,15 @@ class _SignupScreenState extends State<SignupScreen> {
                   height: 1.5,
                 ),
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 32),
+
+              // ── Bouton Google ─────────────────────────────────────────────
+              _buildGoogleButton(),
+              const SizedBox(height: 24),
+
+              // ── Séparateur ────────────────────────────────────────────────
+              _buildDivider(),
+              const SizedBox(height: 24),
 
               // ── Nom complet ──────────────────────────────────────────────
               _buildFieldLabel('Nom complet'),
@@ -181,7 +203,6 @@ class _SignupScreenState extends State<SignupScreen> {
               ),
               const SizedBox(height: 12),
 
-              // ── Indicateur force mot de passe ────────────────────────────
               if (_passwordCtrl.text.isNotEmpty) _buildPasswordStrength(),
               const SizedBox(height: 24),
 
@@ -212,7 +233,6 @@ class _SignupScreenState extends State<SignupScreen> {
                 ],
               ),
 
-              // ── Message d'erreur ─────────────────────────────────────────
               if (_error != null) ...[
                 const SizedBox(height: 16),
                 Container(
@@ -318,6 +338,77 @@ class _SignupScreenState extends State<SignupScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildGoogleButton() {
+    return OutlinedButton(
+      onPressed: (_loading || _loadingGoogle) ? null : _signupWithGoogle,
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size(double.infinity, 56),
+        side: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        backgroundColor: Colors.white.withValues(alpha: 0.03),
+      ),
+      child: _loadingGoogle
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            )
+          : Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                RichText(
+                  text: const TextSpan(
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    children: [
+                      TextSpan(text: 'G', style: TextStyle(color: Color(0xFF4285F4))),
+                      TextSpan(text: 'o', style: TextStyle(color: Color(0xFFEA4335))),
+                      TextSpan(text: 'o', style: TextStyle(color: Color(0xFFFBBC05))),
+                      TextSpan(text: 'g', style: TextStyle(color: Color(0xFF4285F4))),
+                      TextSpan(text: 'l', style: TextStyle(color: Color(0xFF34A853))),
+                      TextSpan(text: 'e', style: TextStyle(color: Color(0xFFEA4335))),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  "S'inscrire avec Google",
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white.withValues(alpha: 0.85),
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+
+  Widget _buildDivider() {
+    return Row(
+      children: [
+        Expanded(
+          child: Divider(color: Colors.white.withValues(alpha: 0.1), thickness: 1),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Text(
+            'ou avec email',
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              color: Colors.white.withValues(alpha: 0.3),
+            ),
+          ),
+        ),
+        Expanded(
+          child: Divider(color: Colors.white.withValues(alpha: 0.1), thickness: 1),
+        ),
+      ],
     );
   }
 

@@ -14,6 +14,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailCtrl    = TextEditingController();
   final _passwordCtrl = TextEditingController();
   bool _loading       = false;
+  bool _loadingGoogle = false;
   bool _showPassword  = false;
   String? _error;
 
@@ -39,6 +40,21 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (!mounted) return;
     setState(() => _loading = false);
+
+    if (result.success) {
+      Navigator.pushReplacementNamed(context, '/feed');
+    } else {
+      setState(() => _error = result.error);
+    }
+  }
+
+  Future<void> _loginWithGoogle() async {
+    setState(() { _loadingGoogle = true; _error = null; });
+
+    final result = await AuthService.signInWithGoogle();
+
+    if (!mounted) return;
+    setState(() => _loadingGoogle = false);
 
     if (result.success) {
       Navigator.pushReplacementNamed(context, '/feed');
@@ -104,6 +120,14 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 40),
+
+              // ── Bouton Google ───────────────────────────────────────────
+              _buildGoogleButton(),
+              const SizedBox(height: 20),
+
+              // ── Séparateur ──────────────────────────────────────────────
+              _buildDivider(),
+              const SizedBox(height: 20),
 
               // ── Champ email ────────────────────────────────────────────
               _buildFieldLabel('E-MAIL PROFESSIONNEL'),
@@ -259,6 +283,77 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildGoogleButton() {
+    return OutlinedButton(
+      onPressed: (_loading || _loadingGoogle) ? null : _loginWithGoogle,
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size(double.infinity, 56),
+        side: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        backgroundColor: Colors.white.withValues(alpha: 0.03),
+      ),
+      child: _loadingGoogle
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            )
+          : Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                RichText(
+                  text: const TextSpan(
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    children: [
+                      TextSpan(text: 'G', style: TextStyle(color: Color(0xFF4285F4))),
+                      TextSpan(text: 'o', style: TextStyle(color: Color(0xFFEA4335))),
+                      TextSpan(text: 'o', style: TextStyle(color: Color(0xFFFBBC05))),
+                      TextSpan(text: 'g', style: TextStyle(color: Color(0xFF4285F4))),
+                      TextSpan(text: 'l', style: TextStyle(color: Color(0xFF34A853))),
+                      TextSpan(text: 'e', style: TextStyle(color: Color(0xFFEA4335))),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'Continuer avec Google',
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white.withValues(alpha: 0.85),
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+
+  Widget _buildDivider() {
+    return Row(
+      children: [
+        Expanded(
+          child: Divider(color: Colors.white.withValues(alpha: 0.1), thickness: 1),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Text(
+            'ou',
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              color: Colors.white.withValues(alpha: 0.3),
+            ),
+          ),
+        ),
+        Expanded(
+          child: Divider(color: Colors.white.withValues(alpha: 0.1), thickness: 1),
+        ),
+      ],
     );
   }
 

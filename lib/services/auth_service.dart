@@ -1,7 +1,14 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class AuthService {
   static final _client = Supabase.instance.client;
+
+  // ── Google Sign-In client ─────────────────────────────────────────────────
+  static final _googleSignIn = GoogleSignIn(
+    clientId: '751698052462-tirush8r4ufkne5eh3cv0ifo6rn725v7.apps.googleusercontent.com',
+    scopes: ['email', 'profile'],
+  );
 
   // ── Utilisateur courant ───────────────────────────────────────────────────
   static User? get currentUser => _client.auth.currentUser;
@@ -51,8 +58,39 @@ class AuthService {
     }
   }
 
+  // ── Connexion Google ──────────────────────────────────────────────────────
+  static Future<AuthResult> signInWithGoogle() async {
+    try {
+      final googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) {
+        return AuthResult.error('Connexion Google annulée.');
+      }
+
+      final googleAuth = await googleUser.authentication;
+      final idToken    = googleAuth.idToken;
+      final accessToken = googleAuth.accessToken;
+
+      if (idToken == null) {
+        return AuthResult.error('Impossible de récupérer le token Google.');
+      }
+
+      await _client.auth.signInWithIdToken(
+        provider: OAuthProvider.google,
+        idToken: idToken,
+        accessToken: accessToken,
+      );
+
+      return AuthResult.success();
+    } on AuthException catch (e) {
+      return AuthResult.error(_translateError(e.message));
+    } catch (e) {
+      return AuthResult.error('Erreur lors de la connexion Google.');
+    }
+  }
+
   // ── Déconnexion ───────────────────────────────────────────────────────────
   static Future<void> signOut() async {
+    await _googleSignIn.signOut();
     await _client.auth.signOut();
   }
 
