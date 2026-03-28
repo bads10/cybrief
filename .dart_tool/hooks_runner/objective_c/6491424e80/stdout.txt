@@ -1,0 +1,54 @@
+Running `(cd /Users/badaoui/.pub-cache/hosted/pub.dev/objective_c-9.3.0/; ANDROID_HOME=/Users/badaoui/Library/Android/sdk TMPDIR=/var/folders/5t/91wc6c6j185d15v3ygvhmrfh0000gn/T/ PATH=/Applications/Xcode.app/Contents/SharedFrameworks/SwiftBuild.framework/Versions/A/PlugIns/SWBBuildService.bundle/Contents/PlugIns/SWBUniversalPlatformPlugin.bundle/Contents/Frameworks/SWBUniversalPlatform.framework/Resources:/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin:/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/local/bin:/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/libexec:/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/usr/bin:/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/usr/local/bin:/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/bin:/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/local/bin:/Applications/Xcode.app/Contents/Developer/usr/bin:/Applications/Xcode.app/Contents/Developer/usr/local/bin:/Users/badaoui/.nvm/versions/node/v24.14.0/bin:/Library/Frameworks/Python.framework/Versions/3.14/bin:/usr/local/bin:/usr/local/sbin:/Library/Frameworks/Python.framework/Versions/3.13/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/Library/Apple/usr/bin:/usr/local/MacGPG2/bin:/Applications/VMware Fusion.app/Contents/Public:/Users/badaoui/.opencode/bin:/Users/badaoui/Desktop/Codna/flutter/bin HOME=/Users/badaoui /Users/badaoui/Desktop/Codna/flutter/bin/cache/dart-sdk/bin/dart --packages=/Users/badaoui/cybrief/.dart_tool/package_config.json /Users/badaoui/cybrief/.dart_tool/hooks_runner/objective_c/6491424e80/hook.dill --config=/Users/badaoui/cybrief/.dart_tool/hooks_runner/objective_c/6491424e80/input.json )`.
+INFO: 2026-03-28 19:05:40.691532: Running `/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang --version`.
+
+INFO: 2026-03-28 19:05:40.737648: Running `/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang --version`.
+
+INFO: 2026-03-28 19:05:40.776046: Running: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.2.sdk -target x86_64-apple-ios-simulator -mios-version-min=13 -c /Users/badaoui/.pub-cache/hosted/pub.dev/objective_c-9.3.0/src/include/dart_api_dl.c -fpic -I src -o /Users/badaoui/cybrief/.dart_tool/hooks_runner/shared/objective_c/build/6491424e80/obj/src/include/dart_api_dl.c.o
+
+INFO: 2026-03-28 19:05:40.777088: Running: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.2.sdk -target x86_64-apple-ios-simulator -mios-version-min=13 -c /Users/badaoui/.pub-cache/hosted/pub.dev/objective_c-9.3.0/src/objective_c.c -fpic -I src -o /Users/badaoui/cybrief/.dart_tool/hooks_runner/shared/objective_c/build/6491424e80/obj/src/objective_c.c.o
+
+INFO: 2026-03-28 19:05:40.777542: Running: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.2.sdk -target x86_64-apple-ios-simulator -mios-version-min=13 -x objective-c -fobjc-arc -c /Users/badaoui/.pub-cache/hosted/pub.dev/objective_c-9.3.0/src/input_stream_adapter.m -fpic -I src -o /Users/badaoui/cybrief/.dart_tool/hooks_runner/shared/objective_c/build/6491424e80/obj/src/input_stream_adapter.m.o
+
+INFO: 2026-03-28 19:05:40.777824: Running: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.2.sdk -target x86_64-apple-ios-simulator -mios-version-min=13 -x objective-c -fobjc-arc -c /Users/badaoui/.pub-cache/hosted/pub.dev/objective_c-9.3.0/src/objective_c.m -fpic -I src -o /Users/badaoui/cybrief/.dart_tool/hooks_runner/shared/objective_c/build/6491424e80/obj/src/objective_c.m.o
+
+INFO: 2026-03-28 19:05:40.778666: Running: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.2.sdk -target x86_64-apple-ios-simulator -mios-version-min=13 -x objective-c -fobjc-arc -c /Users/badaoui/.pub-cache/hosted/pub.dev/objective_c-9.3.0/src/ns_number.m -fpic -I src -o /Users/badaoui/cybrief/.dart_tool/hooks_runner/shared/objective_c/build/6491424e80/obj/src/ns_number.m.o
+
+INFO: 2026-03-28 19:05:40.779034: Running: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.2.sdk -target x86_64-apple-ios-simulator -mios-version-min=13 -x objective-c -fobjc-arc -c /Users/badaoui/.pub-cache/hosted/pub.dev/objective_c-9.3.0/src/protocol.m -fpic -I src -o /Users/badaoui/cybrief/.dart_tool/hooks_runner/shared/objective_c/build/6491424e80/obj/src/protocol.m.o
+
+INFO: 2026-03-28 19:05:40.779295: Running: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.2.sdk -target x86_64-apple-ios-simulator -mios-version-min=13 -x objective-c -fobjc-arc -c /Users/badaoui/.pub-cache/hosted/pub.dev/objective_c-9.3.0/src/objective_c_bindings_generated.m -fpic -I src -o /Users/badaoui/cybrief/.dart_tool/hooks_runner/shared/objective_c/build/6491424e80/obj/src/objective_c_bindings_generated.m.o
+
+INFO: 2026-03-28 19:05:40.932636: Generated /Users/badaoui/cybrief/.dart_tool/hooks_runner/shared/objective_c/build/6491424e80/obj/src/objective_c.c.o
+
+INFO: 2026-03-28 19:05:40.942065: 
+INFO: 2026-03-28 19:05:40.942146: 
+INFO: 2026-03-28 19:05:40.942197: Generated /Users/badaoui/cybrief/.dart_tool/hooks_runner/shared/objective_c/build/6491424e80/obj/src/include/dart_api_dl.c.o
+
+INFO: 2026-03-28 19:05:40.949981: 
+INFO: 2026-03-28 19:05:40.950035: 
+INFO: 2026-03-28 19:05:40.950059: Generated /Users/badaoui/cybrief/.dart_tool/hooks_runner/shared/objective_c/build/6491424e80/obj/src/observer.m.o
+
+INFO: 2026-03-28 19:05:40.951064: 
+INFO: 2026-03-28 19:05:40.951107: 
+INFO: 2026-03-28 19:05:40.951130: Generated /Users/badaoui/cybrief/.dart_tool/hooks_runner/shared/objective_c/build/6491424e80/obj/src/protocol.m.o
+
+INFO: 2026-03-28 19:05:41.174593: 
+INFO: 2026-03-28 19:05:41.174663: 
+INFO: 2026-03-28 19:05:41.174688: Generated /Users/badaoui/cybrief/.dart_tool/hooks_runner/shared/objective_c/build/6491424e80/obj/src/ns_number.m.o
+
+INFO: 2026-03-28 19:05:41.206610: 
+INFO: 2026-03-28 19:05:41.206646: 
+INFO: 2026-03-28 19:05:41.206668: Generated /Users/badaoui/cybrief/.dart_tool/hooks_runner/shared/objective_c/build/6491424e80/obj/src/objective_c.m.o
+
+ter.m.o
+
+INFO: 2026-03-28 19:05:41.225690: 
+INFO: 2026-03-28 19:05:41.225772: 
+INFO: 2026-03-28 19:05:41.225797: Generated /Users/badaoui/cybrief/.dart_tool/hooks_runner/shared/objective_c/build/6491424e80/obj/src/objective_c_bindings_generated.m.o
+
+INFO: 2026-03-28 19:05:41.226442: Running: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -shared -Wl,-encryptable -undefined dynamic_lookup -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.2.sdk -target x86_64-apple-ios-simulator -mios-version-min=13 /Users/badaoui/cybrief/.dart_tool/hooks_runner/shared/objective_c/build/6491424e80/obj/src/include/dart_api_dl.c.o /Users/badaoui/cybrief/.dart_tool/hooks_runner/shared/objective_c/build/6491424e80/obj/src/objective_c.c.o /Users/badaoui/cybrief/.dart_tool/hooks_runner/shared/objective_c/build/6491424e80/obj/src/input_stream_adapter.m.o /Users/badaoui/cybrief/.dart_tool/hooks_runner/shared/objective_c/build/6491424e80/obj/src/objective_c.m.o /Users/badaoui/cybrief/.dart_tool/hooks_runner/shared/objective_c/build/6491424e80/obj/src/observer.m.o /Users/badaoui/cybrief/.dart_tool/hooks_runner/shared/objective_c/build/6491424e80/obj/src/ns_number.m.o /Users/badaoui/cybrief/.dart_tool/hooks_runner/shared/objective_c/build/6491424e80/obj/src/protocol.m.o /Users/badaoui/cybrief/.dart_tool/hooks_runner/shared/objective_c/build/6491424e80/obj/src/objective_c_bindings_generated.m.o -o /Users/badaoui/cybrief/.dart_tool/hooks_runner/shared/objective_c/build/6491424e80/objective_c.dylib
+
+INFO: 2026-03-28 19:05:41.288615: 
+INFO: 2026-03-28 19:05:41.288767: ld: warning: -undefined dynamic_lookup is deprecated on iOS-simulator
+
+INFO: 2026-03-28 19:05:41.288790: Generated /Users/badaoui/cybrief/.dart_tool/hooks_runner/shared/objective_c/build/6491424e80/objective_c.dylib
+
