@@ -298,7 +298,9 @@ app.post('/admin/bulk-reclassify', async (req, res) => {
 
 // Retraduire TOUS les articles publiés en français via Gemini
 app.post('/admin/translate-all', async (req, res) => {
-    adminAuth(req, res, async () => {
+    const key = req.headers['x-admin-key'];
+    if (key !== process.env.ADMIN_KEY) return res.status(401).json({ error: 'Non autorisé' });
+    {
         try {
             const articles = await prisma.article.findMany({ where: { status: 'PUBLISHED' } });
             res.json({ message: `Traduction lancée pour ${articles.length} articles`, count: articles.length });
