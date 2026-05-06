@@ -1,9 +1,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'api_constants.dart';
 
 class UserService {
-  static const String _baseUrl = 'https://cybrief-backend.up.railway.app';
+  static const String _baseUrl = kApiBaseUrl;
   static const String _cachedUserKey = 'cached_user';
 
   // Sync user Firebase → backend après login

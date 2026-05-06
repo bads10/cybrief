@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/flux_screen.dart';
@@ -16,6 +17,7 @@ import 'screens/categories_screen.dart';
 import 'screens/stats_screen.dart';
 import 'screens/paywall_screen.dart';
 import 'services/subscription_service.dart';
+import 'services/user_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,11 +38,33 @@ Future<void> main() async {
   final uid = FirebaseAuth.instance.currentUser?.uid;
   await SubscriptionService.initialize(uid);
 
+  // Enregistrer le token FCM pour les push notifications
+  await _initFcm(uid);
+
   final prefs = await SharedPreferences.getInstance();
   final savedLang = prefs.getString('app_language') ?? 'fr';
   final initialScreen = await _getInitialRoute();
 
   runApp(CybriefApp(initialScreen: initialScreen, locale: Locale(savedLang)));
+}
+
+Future<void> _initFcm(String? uid) async {
+  try {
+    final messaging = FirebaseMessaging.instance;
+    await messaging.requestPermission(alert: true, badge: true, sound: true);
+    final token = await messaging.getToken();
+    if (token != null && uid != null) {
+      await UserService.updateUser(uid, {'fcmToken': token});
+    }
+    messaging.onTokenRefresh.listen((newToken) {
+      final currentUid = FirebaseAuth.instance.currentUser?.uid;
+      if (currentUid != null) {
+        UserService.updateUser(currentUid, {'fcmToken': newToken});
+      }
+    });
+  } catch (e) {
+    // FCM non critique — continuer même en cas d'erreur
+  }
 }
 
 // Vérifie si l'onboarding a déjà été vu

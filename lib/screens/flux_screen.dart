@@ -9,6 +9,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../services/user_service.dart';
 import '../services/subscription_service.dart';
+import '../services/api_constants.dart';
 
 class FluxScreen extends StatefulWidget {
   const FluxScreen({super.key});
@@ -18,7 +19,7 @@ class FluxScreen extends StatefulWidget {
 }
 
 class _FluxScreenState extends State<FluxScreen> {
-  static const String _kBaseUrl = 'https://cybrief-production.up.railway.app';
+  static const String _kBaseUrl = kApiBaseUrl;
 
   List<BriefItem> _items = [];
   bool _isLoading = true;
