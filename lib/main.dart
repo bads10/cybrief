@@ -1,42 +1,99 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'screens/onboarding_screen.dart';
+import 'screens/flux_screen.dart';
 import 'screens/login_screen.dart';
-import 'screens/threat_feed_screen.dart';
 import 'screens/threat_detail_screen.dart';
 import 'screens/signup_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/notifications_screen.dart';
 import 'screens/categories_screen.dart';
 import 'screens/stats_screen.dart';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Remplace ces deux valeurs par tes vraies clés Supabase CyBrief
-// (Settings → API dans le dashboard Supabase)
-// ─────────────────────────────────────────────────────────────────────────────
-const String _supabaseUrl     = 'https://ghtblyjyusljdyjbxohd.supabase.co';
-const String _supabaseAnonKey = 'sb_publishable_dPb7e5HKcK8Yr52_ANyesA_BOj-RC7S';
+import 'screens/paywall_screen.dart';
+import 'services/subscription_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Supabase.initialize(
-    url: _supabaseUrl,
-    anonKey: _supabaseAnonKey,
+  await Firebase.initializeApp(
+    options: const FirebaseOptions(
+      apiKey: 'AIzaSyBgDIF0uyElGVlAxazcCjZxz0PbbLYqAtM',
+      appId: '1:694709746993:ios:0b9d764809618e34768410',
+      messagingSenderId: '694709746993',
+      projectId: 'gen-lang-client-0845651189',
+      storageBucket: 'gen-lang-client-0845651189.firebasestorage.app',
+      iosClientId: '694709746993-8jcdtq1ud1gem5ihdiki58untcjf1e2a.apps.googleusercontent.com',
+      iosBundleId: 'com.badaoui.cybrief',
+    ),
   );
 
-  runApp(const CybriefApp());
+  // Initialiser RevenueCat
+  final uid = FirebaseAuth.instance.currentUser?.uid;
+  await SubscriptionService.initialize(uid);
+
+  final prefs = await SharedPreferences.getInstance();
+  final savedLang = prefs.getString('app_language') ?? 'fr';
+  final initialScreen = await _getInitialRoute();
+
+  runApp(CybriefApp(initialScreen: initialScreen, locale: Locale(savedLang)));
 }
 
-class CybriefApp extends StatelessWidget {
-  const CybriefApp({super.key});
+// Vérifie si l'onboarding a déjà été vu
+Future<Widget> _getInitialRoute() async {
+  final prefs = await SharedPreferences.getInstance();
+  final done = prefs.getBool('onboarding_done') ?? false;
+  final user = FirebaseAuth.instance.currentUser;
+
+  if (!done) return const OnboardingScreen();
+  if (user == null) return const LoginScreen();
+  return const FluxScreen();
+}
+
+class CybriefApp extends StatefulWidget {
+  final Widget initialScreen;
+  final Locale locale;
+  const CybriefApp({super.key, required this.initialScreen, required this.locale});
+
+  static _CybriefAppState? of(BuildContext context) =>
+      context.findAncestorStateOfType<_CybriefAppState>();
+
+  @override
+  State<CybriefApp> createState() => _CybriefAppState();
+}
+
+class _CybriefAppState extends State<CybriefApp> {
+  late Locale _locale;
+
+  @override
+  void initState() {
+    super.initState();
+    _locale = widget.locale;
+  }
+
+  void setLocale(Locale locale) {
+    setState(() => _locale = locale);
+    SharedPreferences.getInstance().then(
+      (p) => p.setString('app_language', locale.languageCode),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Cybrief',
       debugShowCheckedModeBanner: false,
+      locale: _locale,
+      supportedLocales: const [Locale('fr'), Locale('en')],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       theme: ThemeData(
         brightness: Brightness.dark,
         scaffoldBackgroundColor: const Color(0xFF0F172A),
@@ -55,17 +112,17 @@ class CybriefApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      initialRoute: '/',
+      home: widget.initialScreen,
       routes: {
-        '/': (context) => const WelcomeScreen(),
         '/login': (context) => const LoginScreen(),
-        '/feed': (context) => const ThreatFeedScreen(),
+        '/flux': (context) => const FluxScreen(),
         '/detail': (context) => const ThreatDetailScreen(),
         '/signup': (context) => const SignupScreen(),
         '/profile': (context) => const ProfileScreen(),
         '/notifications': (context) => const NotificationsScreen(),
         '/categories': (context) => const CategoriesScreen(),
         '/stats': (context) => const StatsScreen(),
+        '/subscribe': (context) => const PaywallScreen(),
       },
     );
   }
@@ -151,7 +208,7 @@ class WelcomeScreen extends StatelessWidget {
               const SizedBox(height: 24),
               // ── Accès direct sans compte ───────────────────────────────
               TextButton(
-                onPressed: () => Navigator.pushNamed(context, '/feed'),
+                onPressed: () => Navigator.pushNamed(context, '/flux'),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [

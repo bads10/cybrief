@@ -61,5 +61,9 @@ ios/.symlinks/
 .env.local
 .env.production
 .env.*
+!.env.example
+!backend/.env.example
 backend/.env
 .env
+android/key.properties
+android/key.properties

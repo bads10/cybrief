@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import '../services/auth_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/custom_bottom_nav_bar.dart';
+import '../services/user_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -15,23 +16,125 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _notifCritique = true;
   bool _notifEleve    = true;
   bool _notifMoyen    = false;
-  bool _twoFactor     = true;
   bool _darkMode      = true;
+  String _newsletterFreq = 'off';
+  String _currentLang = 'fr';
 
-  // ── Données utilisateur depuis Supabase ───────────────────────────────────
+  @override
+  void initState() {
+    super.initState();
+    _loadUserPrefs();
+  }
+
+  Future<void> _loadUserPrefs() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    final user = await UserService.getUser(uid);
+    if (user != null && mounted) {
+      setState(() {
+        _notifCritique = user['notifCritical'] as bool? ?? true;
+        _notifEleve    = user['notifHigh']     as bool? ?? true;
+        _notifMoyen    = user['notifMedium']   as bool? ?? false;
+        _newsletterFreq = user['newsletterSubscribed'] == true
+            ? (user['newsletterFrequency'] as String? ?? 'daily')
+            : 'off';
+        _currentLang = user['language'] as String? ?? 'fr';
+      });
+    }
+  }
+
+  String _newsletterFreqLabel() {
+    switch (_newsletterFreq) {
+      case 'daily':  return 'Quotidien';
+      case 'weekly': return 'Hebdomadaire';
+      default:       return 'Désactivé';
+    }
+  }
+
+  void _toggleLanguage() {
+    final newLang = _currentLang == 'fr' ? 'en' : 'fr';
+    setState(() => _currentLang = newLang);
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) UserService.updateUser(uid, {'language': newLang});
+    // Changer la locale de l'app
+    // CybriefApp.of(context)?.setLocale(Locale(newLang));
+  }
+
+  void _showNewsletterSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        decoration: const BoxDecoration(
+          color: Color(0xFF0F172A),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(2),
+            ))),
+            const SizedBox(height: 24),
+            Text('Newsletter', style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+            const SizedBox(height: 20),
+            for (final freq in ['daily', 'weekly', 'off'])
+              _buildFreqOption(freq),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFreqOption(String freq) {
+    final labels = {'daily': 'Quotidien (18h30)', 'weekly': 'Hebdomadaire (lundi)', 'off': 'Désactivé'};
+    final isSelected = _newsletterFreq == freq;
+    return GestureDetector(
+      onTap: () async {
+        setState(() => _newsletterFreq = freq);
+        Navigator.pop(context);
+        final uid = FirebaseAuth.instance.currentUser?.uid;
+        if (uid == null) return;
+        if (freq == 'off') {
+          await UserService.unsubscribeNewsletter(uid);
+        } else {
+          await UserService.subscribeNewsletter(uid, frequency: freq, language: _currentLang);
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF38BDF8).withValues(alpha: 0.1) : Colors.white.withValues(alpha: 0.03),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: isSelected ? const Color(0xFF38BDF8) : Colors.white.withValues(alpha: 0.07)),
+        ),
+        child: Row(
+          children: [
+            Expanded(child: Text(labels[freq]!, style: GoogleFonts.inter(fontSize: 15, color: Colors.white, fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal))),
+            if (isSelected) const Icon(Icons.check_circle_rounded, color: Color(0xFF38BDF8), size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Données utilisateur depuis Firebase Auth ─────────────────────────────
   String get _displayName {
-    final user = AuthService.currentUser;
+    final user = FirebaseAuth.instance.currentUser;
     if (user == null) return 'Visiteur';
-    final name = user.userMetadata?['full_name'] as String?;
+    final name = user.displayName;
     if (name != null && name.isNotEmpty) return name;
     return user.email?.split('@').first ?? 'Utilisateur';
   }
 
   String get _displayEmail {
-    return AuthService.currentUser?.email ?? 'Non connecté';
+    return FirebaseAuth.instance.currentUser?.email ?? 'Non connecté';
   }
 
-  bool get _isLoggedIn => AuthService.isLoggedIn;
+  bool get _isLoggedIn => FirebaseAuth.instance.currentUser != null;
 
   @override
   Widget build(BuildContext context) {
@@ -73,25 +176,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ]),
             const SizedBox(height: 24),
 
-            // ── Sécurité ─────────────────────────────────────────
-            _buildSectionHeader('SÉCURITÉ'),
-            _buildCard([
-              _buildToggle(LucideIcons.shieldCheck, 'Double authentification', _twoFactor,
-                  const Color(0xFF22C55E), (v) => setState(() => _twoFactor = v)),
-            ]),
-            const SizedBox(height: 24),
-
             // ── Notifications ────────────────────────────────────
             _buildSectionHeader('NOTIFICATIONS'),
             _buildCard([
               _buildToggle(LucideIcons.octagonAlert, 'Alertes CRITIQUES', _notifCritique,
-                  const Color(0xFFEF4444), (v) => setState(() => _notifCritique = v)),
+                  const Color(0xFFEF4444), (v) => _updateNotif('critical', v)),
               _buildDivider(),
               _buildToggle(LucideIcons.triangleAlert, 'Alertes ÉLEVÉES', _notifEleve,
-                  const Color(0xFFF97316), (v) => setState(() => _notifEleve = v)),
+                  const Color(0xFFF97316), (v) => _updateNotif('high', v)),
               _buildDivider(),
               _buildToggle(LucideIcons.bell, 'Alertes MOYENNES', _notifMoyen,
-                  const Color(0xFFFBBF24), (v) => setState(() => _notifMoyen = v)),
+                  const Color(0xFFFBBF24), (v) => _updateNotif('medium', v)),
             ]),
             const SizedBox(height: 24),
 
@@ -100,6 +195,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _buildCard([
               _buildToggle(LucideIcons.moon, 'Mode sombre', _darkMode,
                   const Color(0xFF38BDF8), (v) => setState(() => _darkMode = v)),
+            ]),
+            const SizedBox(height: 24),
+
+            // ── Newsletter ───────────────────────────────────────
+            if (_isLoggedIn) ...[
+              _buildSectionHeader('NEWSLETTER'),
+              _buildCard([
+                _buildNavRow(
+                  LucideIcons.mail,
+                  'Fréquence',
+                  _newsletterFreqLabel(),
+                  onTap: _showNewsletterSheet,
+                ),
+              ]),
+              const SizedBox(height: 24),
+            ],
+
+            // ── Langue ───────────────────────────────────────────
+            _buildSectionHeader('LANGUE / LANGUAGE'),
+            _buildCard([
+              _buildNavRow(
+                LucideIcons.globe,
+                'Langue de l\'app',
+                _currentLang == 'en' ? '🇬🇧 English' : '🇫🇷 Français',
+                onTap: _toggleLanguage,
+              ),
             ]),
             const SizedBox(height: 24),
 
@@ -378,7 +499,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _logout() async {
-    await AuthService.signOut();
+    await FirebaseAuth.instance.signOut();
     if (!mounted) return;
     Navigator.pushReplacementNamed(context, '/');
   }
@@ -486,57 +607,89 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _showEditProfile() {
+    final nameCtrl = TextEditingController(text: _displayName);
+    bool saving = false;
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (_) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-        child: Container(
-          decoration: const BoxDecoration(
-            color: Color(0xFF0F172A),
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(2),
-              ))),
-              const SizedBox(height: 24),
-              Text('Modifier le profil', style: GoogleFonts.inter(
-                fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white,
-              )),
-              const SizedBox(height: 20),
-              _buildModalTextField('Nom complet', _displayName, LucideIcons.user),
-              const SizedBox(height: 14),
-              _buildModalTextField('E-mail', _displayEmail, LucideIcons.mail),
-              const SizedBox(height: 14),
-              _buildModalTextField('Entreprise', 'Mon Entreprise', LucideIcons.building2),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF38BDF8),
-                    foregroundColor: Colors.black,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Color(0xFF0F172A),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(2),
+                ))),
+                const SizedBox(height: 24),
+                Text('Modifier le profil', style: GoogleFonts.inter(
+                  fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white,
+                )),
+                const SizedBox(height: 20),
+                _buildModalTextField('Nom complet', _displayName, LucideIcons.user, controller: nameCtrl),
+                const SizedBox(height: 14),
+                _buildModalTextField('E-mail', _displayEmail, LucideIcons.mail, readOnly: true),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: ElevatedButton(
+                    onPressed: saving ? null : () async {
+                      setModalState(() => saving = true);
+                      final newName = nameCtrl.text.trim();
+                      if (newName.isNotEmpty && newName != _displayName) {
+                        await FirebaseAuth.instance.currentUser?.updateDisplayName(newName);
+                        final uid = FirebaseAuth.instance.currentUser?.uid;
+                        if (uid != null) {
+                          await UserService.updateUser(uid, {'displayName': newName});
+                        }
+                      }
+                      if (ctx.mounted) Navigator.pop(ctx);
+                      if (mounted) setState(() {});
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF38BDF8),
+                      foregroundColor: Colors.black,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: saving
+                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
+                        : Text('Sauvegarder', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15)),
                   ),
-                  child: Text('Sauvegarder', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15)),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildModalTextField(String label, String hint, IconData icon) {
+  void _updateNotif(String type, bool value) {
+    setState(() {
+      if (type == 'critical') _notifCritique = value;
+      if (type == 'high') _notifEleve = value;
+      if (type == 'medium') _notifMoyen = value;
+    });
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    final data = <String, dynamic>{};
+    if (type == 'critical') data['notifCritical'] = value;
+    if (type == 'high') data['notifHigh'] = value;
+    if (type == 'medium') data['notifMedium'] = value;
+    UserService.updateUser(uid, data);
+  }
+
+  Widget _buildModalTextField(String label, String hint, IconData? icon, {TextEditingController? controller, bool readOnly = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -546,13 +699,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
         )),
         const SizedBox(height: 8),
         TextField(
-          style: GoogleFonts.inter(color: Colors.white, fontSize: 15),
+          controller: controller,
+          readOnly: readOnly,
+          style: GoogleFonts.inter(color: readOnly ? Colors.white.withValues(alpha: 0.4) : Colors.white, fontSize: 15),
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: GoogleFonts.inter(color: Colors.white.withValues(alpha: 0.3)),
-            prefixIcon: Icon(icon, size: 18, color: const Color(0xFF38BDF8)),
+            prefixIcon: icon != null ? Icon(icon, size: 18, color: const Color(0xFF38BDF8)) : null,
             filled: true,
-            fillColor: Colors.white.withValues(alpha: 0.05),
+            fillColor: Colors.white.withValues(alpha: readOnly ? 0.02 : 0.05),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),

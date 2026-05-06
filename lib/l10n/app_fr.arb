@@ -1,0 +1,159 @@
+{
+  "@@locale": "fr",
+
+  "appName": "Cybrief",
+  "@appName": {"description": "Nom de l'application"},
+
+  "tagline": "L'essentiel de la menace en 2 minutes.",
+  "@tagline": {},
+
+  "dailyBriefTitle": "Le Brief Cyber",
+  "@dailyBriefTitle": {},
+
+  "loading": "Chargement...",
+  "@loading": {},
+
+  "retry": "Réessayer",
+  "@retry": {},
+
+  "noArticles": "Aucun brief pour le moment.",
+  "@noArticles": {},
+
+  "connectionError": "Impossible de joindre le serveur. Vérifiez votre connexion.",
+  "@connectionError": {},
+
+  "quotaReachedTitle": "Tu as lu tes 5 briefs du jour",
+  "@quotaReachedTitle": {},
+
+  "quotaReachedBody": "Passe à Premium pour un accès illimité, les CVE complets et les alertes temps réel.",
+  "@quotaReachedBody": {},
+
+  "startFreeTrial": "Commencer l'essai 7 jours gratuits",
+  "@startFreeTrial": {},
+
+  "premiumMonthlyPrice": "9,99€/mois · 79,99€/an · Sans engagement",
+  "@premiumMonthlyPrice": {},
+
+  "settings": "PARAMÈTRES",
+  "@settings": {},
+
+  "account": "COMPTE",
+  "@account": {},
+
+  "security": "SÉCURITÉ",
+  "@security": {},
+
+  "notifications": "NOTIFICATIONS",
+  "@notifications": {},
+
+  "display": "AFFICHAGE",
+  "@display": {},
+
+  "newsletter": "NEWSLETTER",
+  "@newsletter": {},
+
+  "about": "À PROPOS",
+  "@about": {},
+
+  "editProfile": "Modifier le profil",
+  "@editProfile": {},
+
+  "save": "Sauvegarder",
+  "@save": {},
+
+  "logout": "Se déconnecter",
+  "@logout": {},
+
+  "premiumBannerTitle": "Passer à PREMIUM",
+  "@premiumBannerTitle": {},
+
+  "premiumBannerSubtitle": "Accès illimité · Alertes temps réel · CVE exclusifs",
+  "@premiumBannerSubtitle": {},
+
+  "criticalAlerts": "Alertes CRITIQUES",
+  "@criticalAlerts": {},
+
+  "highAlerts": "Alertes ÉLEVÉES",
+  "@highAlerts": {},
+
+  "mediumAlerts": "Alertes MOYENNES",
+  "@mediumAlerts": {},
+
+  "dailyDigest": "Digest quotidien",
+  "@dailyDigest": {},
+
+  "darkMode": "Mode sombre",
+  "@darkMode": {},
+
+  "language": "Langue",
+  "@language": {},
+
+  "french": "Français",
+  "@french": {},
+
+  "english": "English",
+  "@english": {},
+
+  "newsletterFreqDaily": "Quotidien",
+  "@newsletterFreqDaily": {},
+
+  "newsletterFreqWeekly": "Hebdomadaire",
+  "@newsletterFreqWeekly": {},
+
+  "newsletterFreqOff": "Désactivé",
+  "@newsletterFreqOff": {},
+
+  "paywallTitle": "Intelligence cyber\nsans limites",
+  "@paywallTitle": {},
+
+  "paywallSubtitle": "Rejoins les professionnels de la sécurité\nqui ne manquent aucune menace.",
+  "@paywallSubtitle": {},
+
+  "paywallCta": "Commencer l'essai gratuit 7 jours",
+  "@paywallCta": {},
+
+  "restorePurchases": "Restaurer mes achats",
+  "@restorePurchases": {},
+
+  "noCommitment": "Sans engagement · Annulable à tout moment",
+  "@noCommitment": {},
+
+  "loginTitle": "Connexion",
+  "@loginTitle": {},
+
+  "signupTitle": "Inscription",
+  "@signupTitle": {},
+
+  "email": "E-mail",
+  "@email": {},
+
+  "password": "Mot de passe",
+  "@password": {},
+
+  "fullName": "Nom complet",
+  "@fullName": {},
+
+  "continueWithGoogle": "Continuer avec Google",
+  "@continueWithGoogle": {},
+
+  "continueWithApple": "Continuer avec Apple",
+  "@continueWithApple": {},
+
+  "forgotPassword": "Mot de passe oublié ?",
+  "@forgotPassword": {},
+
+  "noAccount": "Pas encore de compte ?",
+  "@noAccount": {},
+
+  "alreadyAccount": "Déjà un compte ?",
+  "@alreadyAccount": {},
+
+  "signIn": "Se connecter",
+  "@signIn": {},
+
+  "signUp": "S'inscrire",
+  "@signUp": {},
+
+  "continueWithoutAccount": "Continuer sans compte →",
+  "@continueWithoutAccount": {}
+}

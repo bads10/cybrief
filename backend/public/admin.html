@@ -411,6 +411,28 @@
 let drafts = [], published = [], sources = [];
 let currentPage = 'drafts';
 
+// ── Auth admin ─────────────────────────────────────────────────────────────
+
+let ADMIN_KEY = sessionStorage.getItem('cybrief_admin_key') || '';
+
+function ensureAuth() {
+  if (ADMIN_KEY) return true;
+  const key = prompt('🔐 Clé admin Cybrief :');
+  if (!key) { alert('Clé requise.'); return false; }
+  ADMIN_KEY = key;
+  sessionStorage.setItem('cybrief_admin_key', key);
+  return true;
+}
+
+function authHeaders() {
+  return { 'Content-Type': 'application/json', 'x-admin-key': ADMIN_KEY };
+}
+
+// Vérifier la clé au chargement
+window.addEventListener('DOMContentLoaded', () => {
+  if (!ADMIN_KEY) ensureAuth();
+});
+
 // ── Utils ──────────────────────────────────────────────────────────────────
 
 function timeAgo(d) {
@@ -436,12 +458,15 @@ function toast(msg, type='success') {
 // ── Data ───────────────────────────────────────────────────────────────────
 
 async function loadAll() {
+  if (!ADMIN_KEY) { ensureAuth(); if (!ADMIN_KEY) return; }
   try {
+    const h = { headers: { 'x-admin-key': ADMIN_KEY } };
     const [dR, pR, sR] = await Promise.all([
-      fetch('/admin/drafts'), fetch('/api/articles'), fetch('/admin/sources')
+      fetch('/admin/drafts', h), fetch('/api/articles'), fetch('/admin/sources', h)
     ]);
+    if (dR.status === 401) { ADMIN_KEY = ''; sessionStorage.removeItem('cybrief_admin_key'); toast('Clé admin incorrecte', 'error'); ensureAuth(); return; }
     drafts    = await dR.json();
-    published = await pR.json();
+    published = (await pR.json()).articles || await pR.json() || [];
     sources   = await sR.json();
 
     const active = sources.filter(s=>s.active).length;
@@ -497,7 +522,7 @@ function renderPublished() {
 async function publishArticle(id) {
   document.getElementById(`pub-${id}`).disabled = true;
   document.getElementById(`rej-${id}`).disabled = true;
-  await fetch(`/admin/publish/${id}`, {method:'PATCH'});
+  await fetch(`/admin/publish/${id}`, {method:'PATCH', headers:authHeaders()});
   const card = document.getElementById(`card-${id}`);
   if (card) { card.style.opacity='0'; card.style.transition='opacity .3s'; }
   setTimeout(loadAll, 400);
@@ -506,7 +531,7 @@ async function publishArticle(id) {
 async function rejectArticle(id) {
   document.getElementById(`rej-${id}`).disabled = true;
   document.getElementById(`pub-${id}`).disabled = true;
-  await fetch(`/admin/reject/${id}`, {method:'DELETE'});
+  await fetch(`/admin/reject/${id}`, {method:'DELETE', headers:authHeaders()});
   const card = document.getElementById(`card-${id}`);
   if (card) { card.style.opacity='0'; card.style.transition='opacity .3s'; }
   setTimeout(loadAll, 400);
@@ -515,7 +540,7 @@ async function rejectArticle(id) {
 async function publishAll() {
   if (!drafts.length) return;
   if (!confirm(`Publier les ${drafts.length} brouillons ?`)) return;
-  for (const a of drafts) await fetch(`/admin/publish/${a.id}`, {method:'PATCH'});
+  for (const a of drafts) await fetch(`/admin/publish/${a.id}`, {method:'PATCH', headers:authHeaders()});
   toast(`${drafts.length} articles publiés ✓`);
   loadAll();
 }
@@ -524,7 +549,7 @@ async function reprocessOne(id) {
   const btn = document.getElementById(`rtr-${id}`);
   if (btn) { btn.disabled = true; btn.textContent = '…'; }
   try {
-    const res = await fetch(`/admin/reprocess/${id}`, {method:'POST'});
+    const res = await fetch(`/admin/reprocess/${id}`, {method:'POST', headers:authHeaders()});
     if (!res.ok) throw new Error();
     toast('Article traduit en français ✓');
     await loadAll();
@@ -543,7 +568,7 @@ async function reprocessAll() {
   document.getElementById('progress-fill').style.width = '0%';
 
   try {
-    await fetch('/admin/reprocess-all', {method:'POST'});
+    await fetch('/admin/reprocess-all', {method:'POST', headers:authHeaders()});
     // Poll DB pour suivre la progression
     let prev = 0;
     const poll = setInterval(async () => {
@@ -629,7 +654,7 @@ function filterSources() {
 
 async function toggleSource(id) {
   try {
-    const res = await fetch(`/admin/sources/${id}/toggle`, {method:'PATCH'});
+    const res = await fetch(`/admin/sources/${id}/toggle`, {method:'PATCH', headers:authHeaders()});
     const updated = await res.json();
     const idx = sources.findIndex(s=>s.id===id);
     if (idx !== -1) sources[idx] = updated;
@@ -642,7 +667,7 @@ async function toggleSource(id) {
 
 async function deleteSource(id, name) {
   if (!confirm(`Supprimer "${name}" définitivement ?`)) return;
-  await fetch(`/admin/sources/${id}`, {method:'DELETE'});
+  await fetch(`/admin/sources/${id}`, {method:'DELETE', headers:authHeaders()});
   sources = sources.filter(s=>s.id!==id);
   renderSources(document.getElementById('source-search').value);
   document.getElementById('badge-sources').textContent = sources.length;
@@ -658,7 +683,7 @@ async function addSource() {
   const category = document.getElementById('new-category').value;
   if (!name || !url) { toast('Nom et URL requis', 'error'); return; }
   try {
-    const res = await fetch('/admin/sources', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name,url,category})});
+    const res = await fetch('/admin/sources', {method:'POST', headers:authHeaders(), body:JSON.stringify({name,url,category})});
     if (res.status === 409) { toast('URL déjà existante', 'error'); return; }
     if (!res.ok) throw new Error();
     const src = await res.json();

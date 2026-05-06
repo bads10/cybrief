@@ -95,7 +95,7 @@ class _SignupScreenState extends State<SignupScreen> {
           duration: const Duration(seconds: 5),
         ),
       );
-      Navigator.pushReplacementNamed(context, '/feed');
+      Navigator.pushReplacementNamed(context, '/flux');
     } else {
       setState(() => _error = result.error);
     }
@@ -110,7 +110,7 @@ class _SignupScreenState extends State<SignupScreen> {
     setState(() => _loadingGoogle = false);
 
     if (result.success) {
-      Navigator.pushReplacementNamed(context, '/feed');
+      Navigator.pushReplacementNamed(context, '/flux');
     } else {
       setState(() => _error = result.error);
     }

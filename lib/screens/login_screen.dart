@@ -15,6 +15,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordCtrl = TextEditingController();
   bool _loading       = false;
   bool _loadingGoogle = false;
+  bool _loadingApple  = false;
   bool _showPassword  = false;
   String? _error;
 
@@ -42,7 +43,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _loading = false);
 
     if (result.success) {
-      Navigator.pushReplacementNamed(context, '/feed');
+      Navigator.pushReplacementNamed(context, '/flux');
     } else {
       setState(() => _error = result.error);
     }
@@ -57,7 +58,22 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _loadingGoogle = false);
 
     if (result.success) {
-      Navigator.pushReplacementNamed(context, '/feed');
+      Navigator.pushReplacementNamed(context, '/flux');
+    } else {
+      setState(() => _error = result.error);
+    }
+  }
+
+  Future<void> _loginWithApple() async {
+    setState(() { _loadingApple = true; _error = null; });
+
+    final result = await AuthService.signInWithApple();
+
+    if (!mounted) return;
+    setState(() => _loadingApple = false);
+
+    if (result.success) {
+      Navigator.pushReplacementNamed(context, '/flux');
     } else {
       setState(() => _error = result.error);
     }
@@ -123,6 +139,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
               // ── Bouton Google ───────────────────────────────────────────
               _buildGoogleButton(),
+              const SizedBox(height: 12),
+              
+              // ── Bouton Apple ────────────────────────────────────────────
+              _buildAppleButton(),
               const SizedBox(height: 20),
 
               // ── Séparateur ──────────────────────────────────────────────
@@ -242,7 +262,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
               // ── Continuer sans compte ──────────────────────────────────
               TextButton(
-                onPressed: () => Navigator.pushReplacementNamed(context, '/feed'),
+                onPressed: () => Navigator.pushReplacementNamed(context, '/flux'),
                 child: Text(
                   'Continuer sans compte →',
                   style: GoogleFonts.inter(
@@ -288,7 +308,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Widget _buildGoogleButton() {
     return OutlinedButton(
-      onPressed: (_loading || _loadingGoogle) ? null : _loginWithGoogle,
+      onPressed: (_loading || _loadingGoogle || _loadingApple) ? null : _loginWithGoogle,
       style: OutlinedButton.styleFrom(
         minimumSize: const Size(double.infinity, 56),
         side: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
@@ -327,6 +347,42 @@ class _LoginScreenState extends State<LoginScreen> {
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
                     color: Colors.white.withValues(alpha: 0.85),
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+
+  Widget _buildAppleButton() {
+    return OutlinedButton(
+      onPressed: (_loading || _loadingGoogle || _loadingApple) ? null : _loginWithApple,
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size(double.infinity, 56),
+        side: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        backgroundColor: Colors.white,
+      ),
+      child: _loadingApple
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.black,
+              ),
+            )
+          : Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.apple, color: Colors.black, size: 24),
+                const SizedBox(width: 12),
+                Text(
+                  'Continuer avec Apple',
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black,
                   ),
                 ),
               ],

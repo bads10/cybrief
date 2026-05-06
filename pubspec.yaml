@@ -1,7 +1,7 @@
 name: cybrief
 description: "A new Flutter project."
 publish_to: 'none'
-version: 0.1.0
+version: 1.0.0+1
 
 environment:
   sdk: ^3.10.7
@@ -9,13 +9,23 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  intl: ^0.19.0
   google_fonts: ^8.0.2
   lucide_icons_flutter: ^3.1.10
   http: ^1.2.2
   webview_flutter: ^4.10.0
-  supabase_flutter: ^2.8.4
   shared_preferences: ^2.3.3
   google_sign_in: ^6.2.1
+  sign_in_with_apple: ^7.0.1
+  crypto: ^3.0.7
+  firebase_core: ^3.6.0
+  firebase_auth: ^5.3.1
+  firebase_messaging: ^15.1.5
+  url_launcher: ^6.3.0
+  lottie: ^3.1.0
+  purchases_flutter: ^8.0.0
 
 dev_dependencies:
   flutter_test:
@@ -24,5 +34,19 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  generate: true
   assets:
     - assets/images/
+    - assets/lottie/
+  # fonts:
+  #   - family: Inter
+  #     fonts:
+  #       - asset: assets/fonts/Inter-Regular.ttf
+  #       - asset: assets/fonts/Inter-Bold.ttf
+  #         weight: 700
+  #       - asset: assets/fonts/Inter-ExtraBold.ttf
+  #         weight: 800
+  #   - family: JetBrainsMono
+  #     fonts:
+  #       - asset: assets/fonts/JetBrainsMono-SemiBold.ttf
+  #         weight: 600

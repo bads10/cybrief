@@ -8,20 +8,52 @@ datasource db {
 }
 
 model Article {
-  id              Int      @id @default(autoincrement())
+  id              Int           @id @default(autoincrement())
   title           String
+  titleEn         String?
   summary         String
+  summaryEn       String?
   criticality     String
   tags            String
-  url             String   @unique
-  status          String   @default("DRAFT")
-  // Indicateurs techniques extraits par Gemini
-  cve             String   @default("")
-  attackType      String   @default("")
-  affectedSystems String   @default("")
-  iocs            String   @default("")
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  url             String        @unique
+  status          String        @default("DRAFT")
+  cve             String        @default("")
+  attackType      String        @default("")
+  affectedSystems String        @default("")
+  iocs            String        @default("")
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  views           ArticleView[]
+}
+
+model ArticleView {
+  id        Int      @id @default(autoincrement())
+  userId    String
+  articleId Int
+  viewedAt  DateTime @default(now())
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, articleId])
+  @@index([userId, viewedAt])
+}
+
+model User {
+  id                   String    @id
+  email                String    @unique
+  displayName          String?
+  language             String    @default("fr")
+  subscriptionStatus   String    @default("free")
+  subscriptionPlatform String?
+  subscriptionExpiry   DateTime?
+  fcmToken             String?
+  notifCritical        Boolean   @default(true)
+  notifHigh            Boolean   @default(true)
+  notifMedium          Boolean   @default(false)
+  notifDigest          Boolean   @default(true)
+  newsletterSubscribed Boolean   @default(false)
+  newsletterFrequency  String    @default("daily")
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 }
 
 model Source {
