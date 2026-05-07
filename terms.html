@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Conditions d'utilisation – Cybrief</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --cyan: #38bdf8;
+      --blue: #135bec;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --border: rgba(255,255,255,0.08);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, 'Inter', BlinkMacSystemFont, sans-serif;
+      font-size: 16px;
+      line-height: 1.7;
+    }
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .logo { font-weight: 700; font-size: 18px; color: var(--text); letter-spacing: -0.5px; }
+    .lang-switch {
+      margin-left: auto;
+      display: flex;
+      gap: 8px;
+    }
+    .lang-switch button {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 4px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .lang-switch button.active {
+      border-color: var(--cyan);
+      color: var(--cyan);
+    }
+    main {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+    }
+    .badge {
+      display: inline-block;
+      background: rgba(56,189,248,0.1);
+      color: var(--cyan);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      padding: 4px 10px;
+      border-radius: 4px;
+      margin-bottom: 16px;
+      text-transform: uppercase;
+    }
+    h1 { font-size: 32px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 8px; }
+    .date { color: var(--muted); font-size: 14px; margin-bottom: 48px; }
+    h2 {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+      margin: 40px 0 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    p { color: rgba(241,245,249,0.8); margin-bottom: 12px; }
+    ul { margin: 8px 0 12px 0; padding: 0; list-style: none; }
+    ul li {
+      color: rgba(241,245,249,0.8);
+      padding: 4px 0 4px 20px;
+      position: relative;
+    }
+    ul li::before {
+      content: '•';
+      color: var(--cyan);
+      position: absolute;
+      left: 4px;
+    }
+    strong { color: var(--text); font-weight: 600; }
+    .contact-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin-top: 40px;
+    }
+    .contact-box p { margin: 0; }
+    a { color: var(--cyan); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .pricing-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      font-size: 15px;
+    }
+    .pricing-table th {
+      background: var(--surface);
+      padding: 10px 16px;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+    .pricing-table td {
+      padding: 10px 16px;
+      border-top: 1px solid var(--border);
+      color: rgba(241,245,249,0.8);
+    }
+    .pricing-table tr:first-child td { border-top: none; }
+    footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+      padding: 24px;
+      border-top: 1px solid var(--border);
+    }
+    [lang="en"] { display: none; }
+  </style>
+</head>
+<body>
+  <header>
+    <span class="logo">Cybrief</span>
+    <span style="color:var(--border)">|</span>
+    <span style="color:var(--muted);font-size:14px">Conditions d'utilisation</span>
+    <div class="lang-switch">
+      <button class="active" onclick="setLang('fr')">FR</button>
+      <button onclick="setLang('en')">EN</button>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- ── FRANÇAIS ── -->
+    <div lang="fr">
+      <div class="badge">Légal</div>
+      <h1>Conditions d'utilisation</h1>
+      <p class="date">Dernière mise à jour : mai 2026</p>
+
+      <h2>1. Acceptation des conditions</h2>
+      <p>En accédant à l'application Cybrief, vous acceptez les présentes conditions d'utilisation. Si vous n'acceptez pas ces conditions, veuillez ne pas utiliser l'application.</p>
+
+      <h2>2. Description du service</h2>
+      <p>Cybrief est une application de veille en cybersécurité qui fournit des résumés quotidiens d'alertes et de menaces informatiques, générés par intelligence artificielle à partir de sources publiques (CERT-FR, NVD, flux RSS spécialisés).</p>
+
+      <h2>3. Abonnement et paiement</h2>
+      <table class="pricing-table">
+        <tr><th>Formule</th><th>Prix</th><th>Contenu</th></tr>
+        <tr><td><strong>Gratuit</strong></td><td>0 €</td><td>5 articles/jour, résumés essentiels</td></tr>
+        <tr><td><strong>Premium Mensuel</strong></td><td>9,99 €/mois</td><td>Accès illimité, CVE, IOC, alertes push, newsletter</td></tr>
+        <tr><td><strong>Premium Annuel</strong></td><td>79,99 €/an</td><td>Idem mensuel — économie 33 %</td></tr>
+      </table>
+      <p>Les abonnements sont gérés via Apple App Store ou Google Play Store. Tout achat est soumis aux conditions de la plateforme concernée.</p>
+      <p><strong>Essai gratuit de 7 jours</strong> : résiliable à tout moment avant la fin de la période d'essai, sans facturation.</p>
+      <p>Le renouvellement automatique peut être désactivé dans les réglages de votre compte App Store ou Google Play au moins 24 heures avant la fin de la période en cours.</p>
+
+      <h2>4. Propriété intellectuelle</h2>
+      <p>Les résumés générés par Cybrief sont fournis à titre informatif. Les sources originales restent la propriété de leurs auteurs respectifs. Cybrief ne revendique aucun droit sur les contenus tiers cités.</p>
+      <p>Le nom "Cybrief", le logo et le design de l'application sont la propriété exclusive de leurs auteurs et ne peuvent être reproduits sans autorisation.</p>
+
+      <h2>5. Limitation de responsabilité</h2>
+      <p>Les informations fournies par Cybrief sont à titre informatif uniquement et ne constituent pas un avis professionnel de sécurité. Cybrief ne peut être tenu responsable de décisions prises sur la base de ces informations.</p>
+      <p>Cybrief ne garantit pas l'exhaustivité ni l'exactitude des informations générées par IA. Consultez toujours les sources primaires pour des décisions critiques.</p>
+
+      <h2>6. Utilisation acceptable</h2>
+      <p>Vous vous engagez à ne pas :</p>
+      <ul>
+        <li>Reproduire ou redistribuer le contenu de l'application à des fins commerciales</li>
+        <li>Tenter de contourner les mécanismes de quota ou d'abonnement</li>
+        <li>Utiliser l'application à des fins illégales</li>
+      </ul>
+
+      <h2>7. Modification des conditions</h2>
+      <p>Cybrief se réserve le droit de modifier ces conditions à tout moment. Les utilisateurs seront notifiés des changements significatifs via l'application. La poursuite de l'utilisation après notification vaut acceptation des nouvelles conditions.</p>
+
+      <h2>8. Droit applicable</h2>
+      <p>Les présentes conditions sont régies par le droit français. Tout litige relève de la compétence exclusive des tribunaux français.</p>
+
+      <h2>9. Contact</h2>
+      <div class="contact-box">
+        <p>Pour toute question : <strong>Cybrief</strong><br>
+        E-mail : <a href="mailto:hello@cybrief.fr">hello@cybrief.fr</a></p>
+      </div>
+    </div>
+
+    <!-- ── ENGLISH ── -->
+    <div lang="en">
+      <div class="badge">Legal</div>
+      <h1>Terms of Use</h1>
+      <p class="date">Last updated: May 2026</p>
+
+      <h2>1. Acceptance of Terms</h2>
+      <p>By accessing the Cybrief application, you agree to these terms of use. If you do not agree, please do not use the application.</p>
+
+      <h2>2. Service Description</h2>
+      <p>Cybrief is a cybersecurity intelligence application that provides daily summaries of security alerts and threats, generated by artificial intelligence from public sources (CERT-FR, NVD, specialized RSS feeds).</p>
+
+      <h2>3. Subscription and Payment</h2>
+      <table class="pricing-table">
+        <tr><th>Plan</th><th>Price</th><th>Content</th></tr>
+        <tr><td><strong>Free</strong></td><td>€0</td><td>5 articles/day, essential summaries</td></tr>
+        <tr><td><strong>Premium Monthly</strong></td><td>€9.99/month</td><td>Unlimited access, CVEs, IOCs, push alerts, newsletter</td></tr>
+        <tr><td><strong>Premium Annual</strong></td><td>€79.99/year</td><td>Same as monthly — save 33%</td></tr>
+      </table>
+      <p>Subscriptions are managed through Apple App Store or Google Play Store. All purchases are subject to the relevant platform's terms.</p>
+      <p><strong>7-day free trial</strong>: cancellable at any time before the trial ends, at no charge.</p>
+      <p>Auto-renewal can be turned off in your App Store or Google Play account settings at least 24 hours before the end of the current period.</p>
+
+      <h2>4. Intellectual Property</h2>
+      <p>Summaries generated by Cybrief are provided for informational purposes. Original sources remain the property of their respective authors. Cybrief claims no rights over third-party content cited.</p>
+      <p>The name "Cybrief", the logo, and the app design are the exclusive property of their authors and may not be reproduced without permission.</p>
+
+      <h2>5. Limitation of Liability</h2>
+      <p>Information provided by Cybrief is for informational purposes only and does not constitute professional security advice. Cybrief cannot be held liable for decisions made based on this information.</p>
+      <p>Cybrief does not guarantee the completeness or accuracy of AI-generated information. Always consult primary sources for critical decisions.</p>
+
+      <h2>6. Acceptable Use</h2>
+      <p>You agree not to:</p>
+      <ul>
+        <li>Reproduce or redistribute app content for commercial purposes</li>
+        <li>Attempt to circumvent quota or subscription mechanisms</li>
+        <li>Use the application for illegal purposes</li>
+      </ul>
+
+      <h2>7. Changes to Terms</h2>
+      <p>Cybrief reserves the right to modify these terms at any time. Users will be notified of significant changes through the application. Continued use after notification constitutes acceptance of the new terms.</p>
+
+      <h2>8. Governing Law</h2>
+      <p>These terms are governed by French law. Any dispute falls under the exclusive jurisdiction of French courts.</p>
+
+      <h2>9. Contact</h2>
+      <div class="contact-box">
+        <p>For any questions: <strong>Cybrief</strong><br>
+        Email: <a href="mailto:hello@cybrief.fr">hello@cybrief.fr</a></p>
+      </div>
+    </div>
+
+  </main>
+
+  <footer>
+    © 2026 <a href="https://www.cybrief.fr">Cybrief</a> · <a href="privacy.html">Politique de confidentialité / Privacy Policy</a>
+  </footer>
+
+  <script>
+    function setLang(lang) {
+      document.querySelectorAll('[lang]').forEach(el => {
+        el.style.display = el.getAttribute('lang') === lang ? 'block' : 'none';
+      });
+      document.querySelectorAll('.lang-switch button').forEach(btn => {
+        btn.classList.toggle('active', btn.textContent.toLowerCase() === lang);
+      });
+    }
+    const browserLang = navigator.language.startsWith('fr') ? 'fr' : 'en';
+    setLang(browserLang);
+  </script>
+</body>
+</html>
