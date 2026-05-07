@@ -17,6 +17,7 @@ import 'screens/categories_screen.dart';
 import 'screens/stats_screen.dart';
 import 'screens/paywall_screen.dart';
 import 'screens/legal_screen.dart';
+import 'l10n/app_localizations.dart';
 import 'services/subscription_service.dart';
 import 'services/user_service.dart';
 
@@ -115,6 +116,7 @@ class _CybriefAppState extends State<CybriefApp> {
       locale: _locale,
       supportedLocales: const [Locale('fr'), Locale('en')],
       localizationsDelegates: const [
+        AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,

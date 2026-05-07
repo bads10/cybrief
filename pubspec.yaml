@@ -37,6 +37,7 @@ flutter:
   generate: true
   assets:
     - assets/images/
+    - assets/lottie/
   # fonts:
   #   - family: Inter
   #     fonts:
