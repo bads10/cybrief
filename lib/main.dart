@@ -16,6 +16,7 @@ import 'screens/notifications_screen.dart';
 import 'screens/categories_screen.dart';
 import 'screens/stats_screen.dart';
 import 'screens/paywall_screen.dart';
+import 'screens/legal_screen.dart';
 import 'services/subscription_service.dart';
 import 'services/user_service.dart';
 
@@ -147,6 +148,8 @@ class _CybriefAppState extends State<CybriefApp> {
         '/categories': (context) => const CategoriesScreen(),
         '/stats': (context) => const StatsScreen(),
         '/subscribe': (context) => const PaywallScreen(),
+        '/terms': (context) => const LegalScreen(type: LegalType.terms),
+        '/privacy': (context) => const LegalScreen(type: LegalType.privacy),
       },
     );
   }

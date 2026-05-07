@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../services/auth_service.dart';
@@ -119,7 +120,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 32),
               Text(
-                'Connexion',
+                AppLocalizations.of(context)!.loginTitle,
                 style: GoogleFonts.libreBaskerville(
                   fontSize: 32,
                   fontWeight: FontWeight.w400,
@@ -184,7 +185,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: TextButton(
                   onPressed: _loading ? null : _forgotPassword,
                   child: Text(
-                    'Mot de passe oublié ?',
+                    AppLocalizations.of(context)!.forgotPassword,
                     style: GoogleFonts.inter(
                       fontSize: 14,
                       color: Colors.white.withValues(alpha: 0.4),
@@ -250,7 +251,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       )
                     : Text(
-                        'Se connecter',
+                        AppLocalizations.of(context)!.signIn,
                         style: GoogleFonts.inter(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -264,7 +265,7 @@ class _LoginScreenState extends State<LoginScreen> {
               TextButton(
                 onPressed: () => Navigator.pushReplacementNamed(context, '/flux'),
                 child: Text(
-                  'Continuer sans compte →',
+                  AppLocalizations.of(context)!.continueWithoutAccount,
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     color: Colors.white.withValues(alpha: 0.35),
@@ -279,7 +280,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    'Pas encore de compte ? ',
+                    '${AppLocalizations.of(context)!.noAccount} ',
                     style: GoogleFonts.inter(
                       fontSize: 14,
                       color: Colors.white.withValues(alpha: 0.5),
@@ -288,7 +289,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   GestureDetector(
                     onTap: () => Navigator.pushNamed(context, '/signup'),
                     child: Text(
-                      "S'inscrire",
+                      AppLocalizations.of(context)!.signUp,
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
@@ -342,7 +343,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  'Continuer avec Google',
+                  AppLocalizations.of(context)!.continueWithGoogle,
                   style: GoogleFonts.inter(
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
@@ -378,7 +379,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 const Icon(Icons.apple, color: Colors.black, size: 24),
                 const SizedBox(width: 12),
                 Text(
-                  'Continuer avec Apple',
+                  AppLocalizations.of(context)!.continueWithApple,
                   style: GoogleFonts.inter(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,

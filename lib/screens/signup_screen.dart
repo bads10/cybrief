@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../services/auth_service.dart';
+import 'legal_screen.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -135,7 +137,7 @@ class _SignupScreenState extends State<SignupScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Rejoignez Cybrief',
+                AppLocalizations.of(context)!.signupTitle,
                 style: GoogleFonts.inter(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
@@ -291,7 +293,7 @@ class _SignupScreenState extends State<SignupScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            'Créer mon compte',
+                            AppLocalizations.of(context)!.signUp,
                             style: GoogleFonts.inter(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -317,15 +319,29 @@ class _SignupScreenState extends State<SignupScreen> {
                         height: 1.5,
                       ),
                       children: [
-                        const TextSpan(text: 'En vous inscrivant, vous acceptez nos '),
-                        TextSpan(
-                          text: 'Conditions d\'utilisation',
-                          style: TextStyle(color: const Color(0xFF135BEC).withValues(alpha: 0.8)),
+                        TextSpan(text: AppLocalizations.of(context)!.termsIntro),
+                        WidgetSpan(
+                          child: GestureDetector(
+                            onTap: () => Navigator.push(context, MaterialPageRoute(
+                              builder: (_) => const LegalScreen(type: LegalType.terms),
+                            )),
+                            child: Text(AppLocalizations.of(context)!.termsTitle,
+                              style: TextStyle(color: const Color(0xFF135BEC).withValues(alpha: 0.9),
+                                fontSize: 13, decoration: TextDecoration.underline),
+                            ),
+                          ),
                         ),
-                        const TextSpan(text: ' et notre '),
-                        TextSpan(
-                          text: 'Politique de confidentialité',
-                          style: TextStyle(color: const Color(0xFF135BEC).withValues(alpha: 0.8)),
+                        TextSpan(text: AppLocalizations.of(context)!.termsAnd),
+                        WidgetSpan(
+                          child: GestureDetector(
+                            onTap: () => Navigator.push(context, MaterialPageRoute(
+                              builder: (_) => const LegalScreen(type: LegalType.privacy),
+                            )),
+                            child: Text(AppLocalizations.of(context)!.privacyTitle,
+                              style: TextStyle(color: const Color(0xFF135BEC).withValues(alpha: 0.9),
+                                fontSize: 13, decoration: TextDecoration.underline),
+                            ),
+                          ),
                         ),
                         const TextSpan(text: '.'),
                       ],

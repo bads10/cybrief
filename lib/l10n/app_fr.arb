@@ -155,5 +155,23 @@
   "@signUp": {},
 
   "continueWithoutAccount": "Continuer sans compte →",
-  "@continueWithoutAccount": {}
+  "@continueWithoutAccount": {},
+
+  "signupTitle": "Rejoindre Cybrief",
+  "@signupTitle": {},
+
+  "termsTitle": "Conditions d'utilisation",
+  "@termsTitle": {},
+
+  "privacyTitle": "Politique de confidentialité",
+  "@privacyTitle": {},
+
+  "termsIntro": "En vous inscrivant, vous acceptez nos ",
+  "@termsIntro": {},
+
+  "termsAnd": " et notre ",
+  "@termsAnd": {},
+
+  "loadingMore": "Chargement...",
+  "@loadingMore": {}
 }
