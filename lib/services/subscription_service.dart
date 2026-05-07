@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:purchases_flutter/purchases_flutter.dart';
 
 class SubscriptionService {
@@ -8,8 +9,8 @@ class SubscriptionService {
   // Entitlements RevenueCat
   static const String _premiumEntitlement = 'premium';
 
-  // API Keys RevenueCat (à remplacer avec vos vraies clés)
-  static const String _appleApiKey  = 'appl_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
+  // API Keys RevenueCat
+  static const String _appleApiKey  = 'appl_owCkvISMMaJIPhBtXPUasGIVWB';
   static const String _googleApiKey = 'goog_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
 
   static bool _initialized = false;
@@ -19,13 +20,8 @@ class SubscriptionService {
     if (_initialized) return;
     await Purchases.setLogLevel(LogLevel.debug);
 
-    PurchasesConfiguration config;
-    // Utiliser la bonne clé selon la plateforme (iOS / Android)
-    try {
-      config = PurchasesConfiguration(_appleApiKey);
-    } catch (_) {
-      config = PurchasesConfiguration(_googleApiKey);
-    }
+    final apiKey = Platform.isIOS ? _appleApiKey : _googleApiKey;
+    final config = PurchasesConfiguration(apiKey);
 
     if (userId != null) {
       config.appUserID = userId;
