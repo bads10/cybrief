@@ -36,8 +36,8 @@ class _PaywallScreenState extends State<PaywallScreen> {
         _loading = false;
         if (offerings?.current != null) {
           final packages = offerings!.current!.availablePackages;
-          final yearly = packages.where((p) => p.packageType == PackageType.annual).firstOrNull;
-          final monthly = packages.where((p) => p.packageType == PackageType.monthly).firstOrNull;
+          final yearly = _findPackage(packages, '\$rc_annual', PackageType.annual);
+          final monthly = _findPackage(packages, '\$rc_monthly', PackageType.monthly);
           _selectedPackage = yearly ?? monthly;
         }
       });
@@ -243,14 +243,20 @@ class _PaywallScreenState extends State<PaywallScreen> {
     );
   }
 
+  // Trouve un package par identifier RevenueCat ($rc_annual / $rc_monthly) avec fallback sur PackageType
+  Package? _findPackage(List<Package> packages, String identifier, PackageType fallbackType) {
+    return packages.where((p) => p.identifier == identifier).firstOrNull
+        ?? packages.where((p) => p.packageType == fallbackType).firstOrNull;
+  }
+
   Widget _buildPlans() {
     if (_offerings?.current == null) {
       return _buildFallbackPlans();
     }
 
     final packages = _offerings!.current!.availablePackages;
-    final yearly  = packages.where((p) => p.packageType == PackageType.annual).firstOrNull;
-    final monthly = packages.where((p) => p.packageType == PackageType.monthly).firstOrNull;
+    final yearly  = _findPackage(packages, '\$rc_annual', PackageType.annual);
+    final monthly = _findPackage(packages, '\$rc_monthly', PackageType.monthly);
 
     return Column(
       children: [
