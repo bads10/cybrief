@@ -86,12 +86,22 @@ class _FluxScreenState extends State<FluxScreen> {
       if (!mounted) return;
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
-        final data = (body['articles'] as List?) ?? [];
+        // API returns either {articles:[...], nextCursor:...} or a raw array
+        final List data;
+        String? nextCursor;
+        bool quotaReached = false;
+        if (body is List) {
+          data = body;
+        } else {
+          data = (body['articles'] as List?) ?? [];
+          nextCursor = body['nextCursor'] as String?;
+          quotaReached = body['quotaReached'] as bool? ?? false;
+        }
         setState(() {
           _items = data.map((e) => BriefItem.fromJson(e as Map<String, dynamic>)).toList();
-          _quotaReached = body['quotaReached'] as bool? ?? false;
-          _nextCursor = body['nextCursor'] as String?;
-          _hasMore = _nextCursor != null;
+          _quotaReached = quotaReached;
+          _nextCursor = nextCursor;
+          _hasMore = nextCursor != null;
           _isLoading = false;
         });
       } else {
@@ -111,11 +121,12 @@ class _FluxScreenState extends State<FluxScreen> {
       if (!mounted) return;
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
-        final data = (body['articles'] as List?) ?? [];
+        final List data = body is List ? body : (body['articles'] as List? ?? []);
+        final String? nextCursor = body is Map ? body['nextCursor'] as String? : null;
         setState(() {
           _items.addAll(data.map((e) => BriefItem.fromJson(e as Map<String, dynamic>)));
-          _nextCursor = body['nextCursor'] as String?;
-          _hasMore = _nextCursor != null;
+          _nextCursor = nextCursor;
+          _hasMore = nextCursor != null;
           _isLoadingMore = false;
         });
       } else {

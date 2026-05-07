@@ -1,3 +1,4 @@
+import 'dart:developer' as dev;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -20,6 +21,8 @@ import 'screens/legal_screen.dart';
 import 'l10n/app_localizations.dart';
 import 'services/subscription_service.dart';
 import 'services/user_service.dart';
+
+final GlobalKey<NavigatorState> globalNavigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -47,6 +50,13 @@ Future<void> main() async {
   final savedLang = prefs.getString('app_language') ?? 'fr';
   final initialScreen = await _getInitialRoute();
 
+  // Register a service extension to navigate programmatically (debug only)
+  dev.registerExtension('ext.cybrief.navigate', (method, params) async {
+    final route = params['route'] ?? '/flux';
+    globalNavigatorKey.currentState?.pushNamed(route);
+    return dev.ServiceExtensionResponse.result('{"navigated":"$route"}');
+  });
+
   runApp(CybriefApp(initialScreen: initialScreen, locale: Locale(savedLang)));
 }
 
@@ -71,6 +81,10 @@ Future<void> _initFcm(String? uid) async {
 
 // Vérifie si l'onboarding a déjà été vu
 Future<Widget> _getInitialRoute() async {
+  // SCREENSHOT MODE: always start at FluxScreen
+  const bool screenshotMode = bool.fromEnvironment('SCREENSHOT_MODE', defaultValue: false);
+  if (screenshotMode) return const FluxScreen();
+
   final prefs = await SharedPreferences.getInstance();
   final done = prefs.getBool('onboarding_done') ?? false;
   final user = FirebaseAuth.instance.currentUser;
@@ -111,6 +125,7 @@ class _CybriefAppState extends State<CybriefApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: globalNavigatorKey,
       title: 'Cybrief',
       debugShowCheckedModeBanner: false,
       locale: _locale,
