@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../widgets/custom_bottom_nav_bar.dart';
-
-const String _kBaseUrl = 'https://cybrief-production.up.railway.app';
+import '../widgets/terminal_widgets.dart';
+import '../theme/terminal_theme.dart';
+import '../services/api_constants.dart';
+import 'article_browser_screen.dart';
 
 class CategoriesScreen extends StatefulWidget {
   const CategoriesScreen({super.key});
@@ -19,13 +19,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
   bool _loading = true;
   String _selectedFilter = 'TOUS';
 
-  final List<String> _filters = ['TOUS', 'CRITIQUE', 'ÉLEVÉ', 'MOYEN'];
-  final Map<String, Color> _critColors = {
-    'CRITIQUE': const Color(0xFFEF4444),
-    'ÉLEVÉ': const Color(0xFFF97316),
-    'MOYEN': const Color(0xFFFBBF24),
-    'FAIBLE': const Color(0xFF22C55E),
-  };
+  static const _filters = ['TOUS', 'CRITIQUE', 'ÉLEVÉ', 'MOYEN', 'FAIBLE'];
 
   @override
   void initState() {
@@ -34,92 +28,214 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
   }
 
   Future<void> _load() async {
+    setState(() => _loading = true);
     try {
-      final r = await http.get(Uri.parse('$_kBaseUrl/api/articles'));
+      final r = await http
+          .get(Uri.parse('$kApiBaseUrl/api/articles'))
+          .timeout(const Duration(seconds: 10));
       if (r.statusCode == 200) {
-        setState(() { _articles = json.decode(r.body); _loading = false; });
+        final body = json.decode(r.body);
+        setState(() {
+          _articles = body is List ? body : (body['articles'] as List? ?? []);
+          _loading = false;
+        });
+      } else {
+        setState(() => _loading = false);
       }
     } catch (_) {
       setState(() => _loading = false);
     }
   }
 
-  List<dynamic> get _filtered => _selectedFilter == 'TOUS'
-      ? _articles
-      : _articles.where((a) => (a['criticality'] as String? ?? '').toUpperCase() == _selectedFilter).toList();
+  String _critToV1(String crit) {
+    final c = crit.toUpperCase();
+    if (c.contains('CRIT')) return 'CRIT';
+    if (c.contains('ELEV') || c.contains('HIGH')) return 'HIGH';
+    if (c.contains('MOY') || c.contains('MED')) return 'MED';
+    if (c.contains('FAI') || c.contains('LOW')) return 'LOW';
+    return 'MED';
+  }
+
+  List<dynamic> get _filtered {
+    if (_selectedFilter == 'TOUS') return _articles;
+    return _articles.where((a) {
+      final c = (a['criticality'] as String? ?? '').toUpperCase();
+      return c == _selectedFilter ||
+          (c.contains('CRIT') && _selectedFilter == 'CRITIQUE') ||
+          (c.contains('ELEV') && _selectedFilter == 'ÉLEVÉ') ||
+          (c.contains('MOY') && _selectedFilter == 'MOYEN') ||
+          (c.contains('FAI') && _selectedFilter == 'FAIBLE');
+    }).toList();
+  }
+
+  int _countBy(String filter) {
+    if (filter == 'TOUS') return _articles.length;
+    return _articles.where((a) {
+      final c = (a['criticality'] as String? ?? '').toUpperCase();
+      return c == filter ||
+          (c.contains('CRIT') && filter == 'CRITIQUE') ||
+          (c.contains('ELEV') && filter == 'ÉLEVÉ') ||
+          (c.contains('MOY') && filter == 'MOYEN') ||
+          (c.contains('FAI') && filter == 'FAIBLE');
+    }).length;
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        automaticallyImplyLeading: false,
-        title: Text('INTEL', style: GoogleFonts.inter(
-          fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white, letterSpacing: 1.5,
-        )),
-      ),
+      backgroundColor: TT.bg,
       body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header avec stats rapides
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-            child: Row(
-              children: [
-                _statChip('${_articles.where((a) => (a['criticality'] as String? ?? '').toUpperCase() == 'CRITIQUE').length}', 'CRITIQUES', const Color(0xFFEF4444)),
-                const SizedBox(width: 12),
-                _statChip('${_articles.where((a) => (a['criticality'] as String? ?? '').toUpperCase() == 'ÉLEVÉ').length}', 'ÉLEVÉS', const Color(0xFFF97316)),
-                const SizedBox(width: 12),
-                _statChip('${_articles.length}', 'TOTAL', const Color(0xFF38BDF8)),
-              ],
-            ),
+          SizedBox(height: MediaQuery.of(context).padding.top),
+          TerminalTopBar(
+            label: 'INTEL // CVE+IOC',
+            right: '${_articles.length} / TOTAL',
           ),
-          // Filtres
-          SizedBox(
-            height: 36,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              itemCount: _filters.length,
-              itemBuilder: (ctx, i) {
-                final f = _filters[i];
-                final selected = f == _selectedFilter;
-                return GestureDetector(
-                  onTap: () => setState(() => _selectedFilter = f),
-                  child: Container(
-                    margin: const EdgeInsets.only(right: 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: selected ? const Color(0xFF38BDF8).withValues(alpha: 0.15) : Colors.white.withValues(alpha: 0.05),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: selected ? const Color(0xFF38BDF8) : Colors.white.withValues(alpha: 0.1),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 4 severity count cards
+                _buildCountGrid(),
+
+                // Search + sort bar
+                Padding(
+                  padding:
+                      const EdgeInsets.fromLTRB(12, 10, 12, 0),
+                  child: Row(children: [
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: TT.surface,
+                          border: Border.all(color: TT.line, width: 1),
+                        ),
+                        child: Text('\$ filter criticité...',
+                            style: TT.mono(
+                                size: 11, color: TT.muted)),
                       ),
                     ),
-                    child: Text(f, style: GoogleFonts.inter(
-                      fontSize: 11, fontWeight: FontWeight.bold,
-                      color: selected ? const Color(0xFF38BDF8) : Colors.white.withValues(alpha: 0.5),
-                      letterSpacing: 1,
-                    )),
-                  ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 16),
-          // Liste
-          Expanded(
-            child: _loading
-                ? const Center(child: CircularProgressIndicator(color: Color(0xFF38BDF8)))
-                : _filtered.isEmpty
-                    ? _emptyState()
-                    : ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        itemCount: _filtered.length,
-                        itemBuilder: (ctx, i) => _intelCard(_filtered[i]),
+                    const SizedBox(width: 6),
+                    GestureDetector(
+                      onTap: () {},
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 8),
+                        decoration: BoxDecoration(
+                          border:
+                              Border.all(color: TT.line, width: 1),
+                        ),
+                        child: Text('SORT ▼',
+                            style: TT.mono(
+                                size: 11, color: TT.text)),
                       ),
+                    ),
+                  ]),
+                ),
+
+                // Filter chips
+                SizedBox(
+                  height: 36,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                    itemCount: _filters.length,
+                    itemBuilder: (_, i) {
+                      final f = _filters[i];
+                      final sel = f == _selectedFilter;
+                      return GestureDetector(
+                        onTap: () =>
+                            setState(() => _selectedFilter = f),
+                        child: Container(
+                          margin: const EdgeInsets.only(right: 6),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: sel ? TT.accent : TT.line,
+                              width: 1,
+                            ),
+                            color: sel
+                                ? TT.accent.withOpacity(0.12)
+                                : Colors.transparent,
+                          ),
+                          child: Text(f,
+                              style: TT.mono(
+                                  size: 10,
+                                  color: sel ? TT.accent : TT.muted,
+                                  letterSpacing: 0.5)),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+
+                // Table header
+                Container(
+                  margin: const EdgeInsets.only(top: 8),
+                  decoration: const BoxDecoration(
+                    color: TT.surface,
+                    border: Border(
+                      top: BorderSide(color: TT.line),
+                      bottom: BorderSide(color: TT.line),
+                    ),
+                  ),
+                  padding:
+                      const EdgeInsets.fromLTRB(12, 8, 12, 8),
+                  child: Row(children: [
+                    SizedBox(
+                        width: 54,
+                        child: Text('SEV',
+                            style: TT.mono(size: 9, letterSpacing: 0.6))),
+                    Expanded(
+                        child: Text('ID / TITRE',
+                            style: TT.mono(
+                                size: 9, letterSpacing: 0.6))),
+                    SizedBox(
+                        width: 50,
+                        child: Text('CVSS',
+                            textAlign: TextAlign.right,
+                            style: TT.mono(
+                                size: 9, letterSpacing: 0.6))),
+                    SizedBox(
+                        width: 46,
+                        child: Text('DATE',
+                            textAlign: TextAlign.right,
+                            style: TT.mono(
+                                size: 9, letterSpacing: 0.6))),
+                  ]),
+                ),
+
+                // Article list
+                Expanded(
+                  child: _loading
+                      ? const Center(
+                          child: SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                  color: TT.accent, strokeWidth: 1.5)))
+                      : _filtered.isEmpty
+                          ? Center(
+                              child: Text('Aucune menace trouvée',
+                                  style: TT.mono(
+                                      size: 12, color: TT.muted)))
+                          : RefreshIndicator(
+                              onRefresh: _load,
+                              color: TT.accent,
+                              backgroundColor: TT.surface,
+                              child: ListView.builder(
+                                physics:
+                                    const AlwaysScrollableScrollPhysics(),
+                                itemCount: _filtered.length,
+                                itemBuilder: (_, i) =>
+                                    _buildRow(_filtered[i]),
+                              ),
+                            ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -127,98 +243,130 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     );
   }
 
-  Widget _statChip(String value, String label, Color color) {
+  Widget _buildCountGrid() {
+    final crit  = _countBy('CRITIQUE');
+    final high  = _countBy('ÉLEVÉ');
+    final med   = _countBy('MOYEN');
+    final low   = _countBy('FAIBLE');
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: TT.line, width: 1)),
       ),
-      child: Column(
-        children: [
-          Text(value, style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: color)),
-          Text(label, style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.bold, color: color.withValues(alpha: 0.7), letterSpacing: 0.8)),
-        ],
+      child: Row(children: [
+        _countCard('CRIT', crit, TT.red),
+        _countCard('HIGH', high, TT.orange),
+        _countCard('MED', med, TT.yellow),
+        _countCard('LOW', low, TT.green, last: true),
+      ]),
+    );
+  }
+
+  Widget _countCard(String label, int count, Color color,
+      {bool last = false}) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.06),
+          border: Border(
+            right: last
+                ? BorderSide.none
+                : const BorderSide(color: TT.line, width: 1),
+          ),
+        ),
+        child: Column(children: [
+          Text('$count',
+              style: TT.sans(
+                  size: 22,
+                  weight: FontWeight.w800,
+                  color: color,
+                  letterSpacing: -1)),
+          const SizedBox(height: 2),
+          Text(label,
+              style: TT.mono(
+                  size: 9,
+                  weight: FontWeight.w700,
+                  color: color,
+                  letterSpacing: 1)),
+        ]),
       ),
     );
   }
 
-  Widget _intelCard(dynamic article) {
-    final crit = article['criticality'] as String? ?? 'MOYEN';
-    final color = _critColors[crit] ?? const Color(0xFFFBBF24);
-    final cve = (article['cve'] as String? ?? '').trim();
-    final attackType = (article['attackType'] as String? ?? '').trim();
-    final iocs = (article['iocs'] as String? ?? '').trim();
-    final hasIndicators = cve.isNotEmpty || attackType.isNotEmpty || iocs.isNotEmpty;
+  Widget _buildRow(dynamic article) {
+    final critRaw = (article['criticality'] as String? ?? 'MOYEN');
+    final level   = _critToV1(critRaw);
+    final cve     = (article['cve'] as String? ?? '').trim();
+    final title   = (article['title'] as String? ?? '');
+    final date    = _formatDate(article['createdAt'] as String?);
 
     return GestureDetector(
-      onTap: () => Navigator.pushNamed(context, '/threat-detail', arguments: article),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.03),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: color.withValues(alpha: 0.15)),
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ArticleBrowserScreen(
+            url: (article['url'] as String? ?? ''),
+            title: title,
+          ),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      ),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+        decoration: const BoxDecoration(
+          border: Border(bottom: BorderSide(color: TT.line, width: 1)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(crit, style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: color)),
-                ),
-                const Spacer(),
-                Icon(LucideIcons.chevronRight, size: 14, color: Colors.white.withValues(alpha: 0.3)),
-              ],
+            SizedBox(width: 54, child: TerminalSevTag(level: level)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (cve.isNotEmpty)
+                    Text(cve.split(',').first.trim(),
+                        style: TT.mono(
+                            size: 10, color: TT.accent, letterSpacing: 0.4)),
+                  Text(title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TT.sans(
+                          size: 12,
+                          weight: FontWeight.w600,
+                          color: TT.text,
+                          height: 1.3)),
+                ],
+              ),
             ),
-            const SizedBox(height: 8),
-            Text(article['title'] ?? '', maxLines: 2, overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white, height: 1.3)),
-            if (hasIndicators) ...[
-              const SizedBox(height: 10),
-              Wrap(spacing: 6, runSpacing: 4, children: [
-                if (cve.isNotEmpty) _tag(cve.split(',').first.trim(), const Color(0xFF38BDF8), LucideIcons.shieldAlert),
-                if (attackType.isNotEmpty) _tag(attackType, const Color(0xFFA78BFA), LucideIcons.crosshair),
-                if (iocs.isNotEmpty) _tag('IOC', const Color(0xFFFBBF24), LucideIcons.activity),
-              ]),
-            ],
+            const SizedBox(width: 4),
+            SizedBox(
+              width: 50,
+              child: Text('—',
+                  textAlign: TextAlign.right,
+                  style: TT.mono(
+                      size: 12, weight: FontWeight.w700, color: TT.text)),
+            ),
+            SizedBox(
+              width: 46,
+              child: Text(date,
+                  textAlign: TextAlign.right,
+                  style: TT.mono(size: 10, color: TT.muted)),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _tag(String text, Color color, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
-      ),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(icon, size: 10, color: color),
-        const SizedBox(width: 4),
-        Text(text, style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: color)),
-      ]),
-    );
-  }
-
-  Widget _emptyState() {
-    return Center(
-      child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Icon(LucideIcons.shieldOff, size: 48, color: Colors.white.withValues(alpha: 0.2)),
-        const SizedBox(height: 16),
-        Text('Aucune menace trouvée', style: GoogleFonts.inter(color: Colors.white.withValues(alpha: 0.4), fontSize: 16)),
-      ]),
-    );
+  String _formatDate(String? isoDate) {
+    if (isoDate == null) return '—';
+    try {
+      final dt = DateTime.parse(isoDate);
+      return '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}';
+    } catch (_) {
+      return '—';
+    }
   }
 }
