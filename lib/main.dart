@@ -1,9 +1,11 @@
+import 'dart:developer' as dev;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/flux_screen.dart';
@@ -15,7 +17,29 @@ import 'screens/notifications_screen.dart';
 import 'screens/categories_screen.dart';
 import 'screens/stats_screen.dart';
 import 'screens/paywall_screen.dart';
+import 'screens/legal_screen.dart';
+import 'l10n/app_localizations.dart';
 import 'services/subscription_service.dart';
+import 'services/user_service.dart';
+
+final GlobalKey<NavigatorState> globalNavigatorKey = GlobalKey<NavigatorState>();
+
+// Handler background (app fermée/arrière-plan) — doit être top-level
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(
+    options: const FirebaseOptions(
+      apiKey: 'AIzaSyBgDIF0uyElGVlAxazcCjZxz0PbbLYqAtM',
+      appId: '1:694709746993:ios:0b9d764809618e34768410',
+      messagingSenderId: '694709746993',
+      projectId: 'gen-lang-client-0845651189',
+      storageBucket: 'gen-lang-client-0845651189.firebasestorage.app',
+      iosClientId: '694709746993-8jcdtq1ud1gem5ihdiki58untcjf1e2a.apps.googleusercontent.com',
+      iosBundleId: 'com.badaoui.cybrief',
+    ),
+  );
+  // Notification traitée par iOS nativement — pas d'action supplémentaire requise
+}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,15 +60,51 @@ Future<void> main() async {
   final uid = FirebaseAuth.instance.currentUser?.uid;
   await SubscriptionService.initialize(uid);
 
+  // Handler messages background
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+  // Enregistrer le token FCM pour les push notifications
+  await _initFcm(uid);
+
   final prefs = await SharedPreferences.getInstance();
   final savedLang = prefs.getString('app_language') ?? 'fr';
   final initialScreen = await _getInitialRoute();
 
+  // Register a service extension to navigate programmatically (debug only)
+  dev.registerExtension('ext.cybrief.navigate', (method, params) async {
+    final route = params['route'] ?? '/flux';
+    globalNavigatorKey.currentState?.pushNamed(route);
+    return dev.ServiceExtensionResponse.result('{"navigated":"$route"}');
+  });
+
   runApp(CybriefApp(initialScreen: initialScreen, locale: Locale(savedLang)));
+}
+
+Future<void> _initFcm(String? uid) async {
+  try {
+    final messaging = FirebaseMessaging.instance;
+    await messaging.requestPermission(alert: true, badge: true, sound: true);
+    final token = await messaging.getToken();
+    if (token != null && uid != null) {
+      await UserService.updateUser(uid, {'fcmToken': token});
+    }
+    messaging.onTokenRefresh.listen((newToken) {
+      final currentUid = FirebaseAuth.instance.currentUser?.uid;
+      if (currentUid != null) {
+        UserService.updateUser(currentUid, {'fcmToken': newToken});
+      }
+    });
+  } catch (e) {
+    // FCM non critique — continuer même en cas d'erreur
+  }
 }
 
 // Vérifie si l'onboarding a déjà été vu
 Future<Widget> _getInitialRoute() async {
+  // SCREENSHOT MODE: always start at FluxScreen
+  const bool screenshotMode = bool.fromEnvironment('SCREENSHOT_MODE', defaultValue: false);
+  if (screenshotMode) return const FluxScreen();
+
   final prefs = await SharedPreferences.getInstance();
   final done = prefs.getBool('onboarding_done') ?? false;
   final user = FirebaseAuth.instance.currentUser;
@@ -85,30 +145,32 @@ class _CybriefAppState extends State<CybriefApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: globalNavigatorKey,
       title: 'Cybrief',
       debugShowCheckedModeBanner: false,
       locale: _locale,
       supportedLocales: const [Locale('fr'), Locale('en')],
       localizationsDelegates: const [
+        AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
       theme: ThemeData(
         brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF0F172A),
-        primaryColor: const Color(0xFF135BEC),
+        scaffoldBackgroundColor: const Color(0xFF0A0A0A),
+        primaryColor: const Color(0xFF00D4FF),
         colorScheme: const ColorScheme.dark(
-          primary: Color(0xFF135BEC),
-          secondary: Color(0xFF38BDF8),
-          surface: Color(0xFF1E293B),
-          onSurface: Colors.white,
+          primary: Color(0xFF00D4FF),
+          secondary: Color(0xFF00D4FF),
+          surface: Color(0xFF111111),
+          onSurface: Color(0xFFE8E8E8),
         ),
         textTheme: GoogleFonts.interTextTheme(
           ThemeData.dark().textTheme,
         ).apply(
-          bodyColor: Colors.white,
-          displayColor: Colors.white,
+          bodyColor: const Color(0xFFE8E8E8),
+          displayColor: const Color(0xFFE8E8E8),
         ),
         useMaterial3: true,
       ),
@@ -117,12 +179,16 @@ class _CybriefAppState extends State<CybriefApp> {
         '/login': (context) => const LoginScreen(),
         '/flux': (context) => const FluxScreen(),
         '/detail': (context) => const ThreatDetailScreen(),
+        '/threat-detail': (context) => const ThreatDetailScreen(),
         '/signup': (context) => const SignupScreen(),
         '/profile': (context) => const ProfileScreen(),
         '/notifications': (context) => const NotificationsScreen(),
         '/categories': (context) => const CategoriesScreen(),
         '/stats': (context) => const StatsScreen(),
         '/subscribe': (context) => const PaywallScreen(),
+        '/terms': (context) => const LegalScreen(type: LegalType.terms),
+        '/privacy': (context) => const LegalScreen(type: LegalType.privacy),
+        '/legal': (context) => const LegalScreen(type: LegalType.terms),
       },
     );
   }
