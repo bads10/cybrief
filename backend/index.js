@@ -71,8 +71,8 @@ app.get('/api/articles', async (req, res) => {
       return res.json({ articles, quotaReached: false, nextCursor });
     }
 
-    // Free : 5 articles/jour
-    const FREE_DAILY_LIMIT = 5;
+    // Free : 5 articles/jour (configurable via env pour les tests)
+    const FREE_DAILY_LIMIT = parseInt(process.env.FREE_DAILY_LIMIT || '5');
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
 
