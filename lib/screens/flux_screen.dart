@@ -124,7 +124,7 @@ class _FluxScreenState extends State<FluxScreen> {
 
   Uri _buildUri({String? cursor}) {
     final uid = FirebaseAuth.instance.currentUser?.uid;
-    final params = <String, String>{'limit': '$_pageSize', 'lang': _lang};
+    final params = <String, String>{'limit': '$_pageSize'};
     if (uid != null) params['userId'] = uid;
     if (cursor != null) params['cursor'] = cursor;
     return Uri.parse('$kApiBaseUrl/api/articles')
@@ -157,7 +157,7 @@ class _FluxScreenState extends State<FluxScreen> {
         }
         setState(() {
           _items = data
-              .map((e) => BriefItem.fromJson(e as Map<String, dynamic>))
+              .map((e) => BriefItem.fromJson(e as Map<String, dynamic>, lang: _lang))
               .toList();
           _quotaReached = quotaReached;
           _nextCursor = nextCursor;

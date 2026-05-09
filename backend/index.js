@@ -117,10 +117,10 @@ app.get('/api/articles', async (req, res) => {
 function _articleSelect(lang) {
   return {
     id: true,
-    title: lang === 'en' ? false : true,
-    titleEn: lang === 'en' ? true : false,
-    summary: lang === 'en' ? false : true,
-    summaryEn: lang === 'en' ? true : false,
+    title: true,           // toujours retourné comme fallback
+    titleEn: true,         // null si pas encore traduit
+    summary: true,         // fallback FR
+    summaryEn: true,       // null si pas encore traduit
     criticality: true,
     tags: true,
     url: true,
