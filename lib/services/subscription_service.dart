@@ -4,13 +4,13 @@ import 'package:purchases_flutter/purchases_flutter.dart';
 class SubscriptionService {
   // IDs produits App Store / Play Store
   static const String _monthlyId  = 'cybrief_monthly';
-  static const String _yearlyId   = 'cybrief_yearly';
+  static const String _yearlyId   = 'cybrief_annuel';
 
   // Entitlements RevenueCat
   static const String _premiumEntitlement = 'premium';
 
   // API Keys RevenueCat
-  static const String _appleApiKey  = 'appl_owCkvISMMaJIPhBtXPUasGIVWB';
+  static const String _appleApiKey  = 'appl_owCkvISMMaJfIPhBtXPUasGIVWB';
   static const String _googleApiKey = 'goog_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
 
   static bool _initialized = false;
@@ -56,10 +56,13 @@ class SubscriptionService {
   }
 
   // Récupérer les offres disponibles
+  static String? lastOfferingsError;
   static Future<Offerings?> getOfferings() async {
     try {
+      lastOfferingsError = null;
       return await Purchases.getOfferings();
-    } catch (_) {
+    } catch (e) {
+      lastOfferingsError = e.toString();
       return null;
     }
   }

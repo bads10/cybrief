@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:lottie/lottie.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
+import '../theme/terminal_theme.dart';
 import '../services/subscription_service.dart';
 import '../services/user_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -29,18 +28,26 @@ class _PaywallScreenState extends State<PaywallScreen> {
   }
 
   Future<void> _loadOfferings() async {
-    final offerings = await SubscriptionService.getOfferings();
-    if (mounted) {
-      setState(() {
-        _offerings = offerings;
-        _loading = false;
-        if (offerings?.current != null) {
-          final packages = offerings!.current!.availablePackages;
-          final yearly = _findPackage(packages, '\$rc_annual', PackageType.annual);
-          final monthly = _findPackage(packages, '\$rc_monthly', PackageType.monthly);
-          _selectedPackage = yearly ?? monthly;
-        }
-      });
+    try {
+      final offerings = await SubscriptionService.getOfferings();
+      if (mounted) {
+        setState(() {
+          _offerings = offerings;
+          _loading = false;
+          if (offerings?.current != null) {
+            final packages = offerings!.current!.availablePackages;
+            final yearly  = _findPackage(packages, '\$rc_annual', PackageType.annual);
+            final monthly = _findPackage(packages, '\$rc_monthly', PackageType.monthly);
+            _selectedPackage = yearly ?? monthly;
+          } else {
+            _error = offerings == null
+                ? 'RC: ${SubscriptionService.lastOfferingsError ?? "getOfferings() → null"}'
+                : 'RC: current offering null (${offerings.all.keys.join(', ')})';
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() { _loading = false; _error = 'RC error: $e'; });
     }
   }
 
@@ -49,7 +56,6 @@ class _PaywallScreenState extends State<PaywallScreen> {
     setState(() { _purchasing = true; _error = null; });
 
     final result = await SubscriptionService.purchasePackage(_selectedPackage!);
-
     if (!mounted) return;
     setState(() => _purchasing = false);
 
@@ -61,8 +67,10 @@ class _PaywallScreenState extends State<PaywallScreen> {
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('🎉 Bienvenue dans Cybrief Premium !', style: GoogleFonts.inter()),
-          backgroundColor: const Color(0xFF22C55E),
+          content: Text('Bienvenue dans Cybrief Premium !',
+              style: GoogleFonts.jetBrainsMono(fontSize: 12)),
+          backgroundColor: TT.green,
+          behavior: SnackBarBehavior.floating,
         ));
       }
     } else if (result.error != null) {
@@ -83,361 +91,397 @@ class _PaywallScreenState extends State<PaywallScreen> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Header avec close button
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const SizedBox(width: 40),
-                  Text('CYBRIEF PREMIUM', style: GoogleFonts.inter(
-                    fontSize: 13, fontWeight: FontWeight.bold,
-                    color: Colors.white.withValues(alpha: 0.5), letterSpacing: 2,
-                  )),
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      width: 40, height: 40,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.06),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Icon(LucideIcons.x, size: 18, color: Colors.white.withValues(alpha: 0.6)),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
-                child: Column(
-                  children: [
-                    // Animation
-                    SizedBox(
-                      height: 120,
-                      child: Lottie.asset('assets/lottie/gift_unlock.json', fit: BoxFit.contain),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Titre
-                    Text(
-                      'Intelligence cyber\nsans limites',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(
-                        fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white, height: 1.2,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Rejoins les professionnels de la sécurité\nqui ne manquent aucune menace.',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(
-                        fontSize: 14, color: Colors.white.withValues(alpha: 0.5), height: 1.5,
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-
-                    // Features
-                    _buildFeatures(),
-                    const SizedBox(height: 32),
-
-                    // Plans
-                    if (_loading)
-                      const CircularProgressIndicator(color: Color(0xFF38BDF8))
-                    else
-                      _buildPlans(),
-
-                    const SizedBox(height: 24),
-
-                    // CTA principal
-                    _buildCTA(),
-
-                    const SizedBox(height: 12),
-
-                    // Erreur
-                    if (_error != null)
-                      Text(_error!, style: GoogleFonts.inter(
-                        color: const Color(0xFFEF4444), fontSize: 13,
-                      ), textAlign: TextAlign.center),
-
-                    const SizedBox(height: 16),
-
-                    // Restaurer + mentions légales
-                    TextButton(
-                      onPressed: _purchasing ? null : _restore,
-                      child: Text('Restaurer mes achats', style: GoogleFonts.inter(
-                        fontSize: 13, color: Colors.white.withValues(alpha: 0.4),
-                      )),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Sans engagement · Annulable à tout moment\nRenouvellement automatique sauf résiliation 24h avant.',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(
-                        fontSize: 11, color: Colors.white.withValues(alpha: 0.25), height: 1.6,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFeatures() {
-    final features = [
-      (LucideIcons.infinity, 'Articles illimités', 'Feed complet sans quota journalier'),
-      (LucideIcons.shieldAlert, 'CVE & IOC complets', 'Indicateurs techniques exhaustifs'),
-      (LucideIcons.zap, 'Alertes temps réel', 'Push pour chaque menace critique'),
-      (LucideIcons.mail, 'Newsletter quotidienne', 'Briefing cyber dans ta boîte mail'),
-      (LucideIcons.fileText, 'Analyses Threat Intel', 'Sources Talos, Mandiant, Unit42…'),
-    ];
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.03),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
-      ),
-      child: Column(
-        children: features.map((f) => Padding(
-          padding: const EdgeInsets.only(bottom: 14),
-          child: Row(
-            children: [
-              Container(
-                width: 36, height: 36,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF135BEC).withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(f.$1, size: 18, color: const Color(0xFF38BDF8)),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(f.$2, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white)),
-                    Text(f.$3, style: GoogleFonts.inter(fontSize: 12, color: Colors.white.withValues(alpha: 0.45))),
-                  ],
-                ),
-              ),
-              const Icon(LucideIcons.check, size: 16, color: Color(0xFF22C55E)),
-            ],
-          ),
-        )).toList(),
-      ),
-    );
-  }
-
-  // Trouve un package par identifier RevenueCat ($rc_annual / $rc_monthly) avec fallback sur PackageType
   Package? _findPackage(List<Package> packages, String identifier, PackageType fallbackType) {
     return packages.where((p) => p.identifier == identifier).firstOrNull
         ?? packages.where((p) => p.packageType == fallbackType).firstOrNull;
-  }
-
-  Widget _buildPlans() {
-    if (_offerings?.current == null) {
-      return _buildFallbackPlans();
-    }
-
-    final packages = _offerings!.current!.availablePackages;
-    final yearly  = _findPackage(packages, '\$rc_annual', PackageType.annual);
-    final monthly = _findPackage(packages, '\$rc_monthly', PackageType.monthly);
-
-    return Column(
-      children: [
-        if (yearly != null) _buildPlanTile(
-          package: yearly,
-          label: 'Annuel',
-          sublabel: 'Économisez 33%',
-          badge: 'POPULAIRE',
-          isSelected: _yearlySelected,
-          onTap: () => setState(() { _yearlySelected = true; _selectedPackage = yearly; }),
-        ),
-        if (yearly != null && monthly != null) const SizedBox(height: 12),
-        if (monthly != null) _buildPlanTile(
-          package: monthly,
-          label: 'Mensuel',
-          isSelected: !_yearlySelected,
-          onTap: () => setState(() { _yearlySelected = false; _selectedPackage = monthly; }),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFallbackPlans() {
-    return Column(
-      children: [
-        _buildStaticPlanTile(
-          label: 'Annuel', price: '79,99€ / an', perMonth: '6,67€ / mois',
-          badge: 'POPULAIRE', isSelected: _yearlySelected,
-          onTap: () => setState(() { _yearlySelected = true; _selectedPackage = null; }),
-        ),
-        const SizedBox(height: 12),
-        _buildStaticPlanTile(
-          label: 'Mensuel', price: '9,99€ / mois', isSelected: !_yearlySelected,
-          onTap: () => setState(() { _yearlySelected = false; _selectedPackage = null; }),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPlanTile({
-    required Package package,
-    required String label,
-    String? sublabel,
-    String? badge,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    final price = package.storeProduct.priceString;
-    final perMonth = package.packageType == PackageType.annual
-        ? '≈ ${_yearlyPerMonth(package.storeProduct.price)}€ / mois'
-        : null;
-
-    return _buildStaticPlanTile(
-      label: label, price: price, perMonth: perMonth,
-      sublabel: sublabel, badge: badge,
-      isSelected: isSelected, onTap: onTap,
-    );
   }
 
   String _yearlyPerMonth(double yearlyPrice) {
     return (yearlyPrice / 12).toStringAsFixed(2);
   }
 
-  Widget _buildStaticPlanTile({
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: TT.bg,
+      body: Column(
+        children: [
+          SizedBox(height: MediaQuery.of(context).padding.top),
+          // TopBar with close
+          Container(
+            height: 28,
+            decoration: const BoxDecoration(
+              color: TT.bg,
+              border: Border(bottom: BorderSide(color: TT.line, width: 1)),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text('// CYBRIEF / PRO',
+                      style: TT.mono(size: 10, letterSpacing: 0.5)),
+                ),
+                GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Text('× CLOSE',
+                      style: TT.mono(size: 10, color: TT.muted)),
+                ),
+              ],
+            ),
+          ),
+
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Hero
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 20, 12, 0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('\$ ./upgrade --pro',
+                            style: TT.mono(
+                                size: 10, color: TT.accent, letterSpacing: 1)),
+                        const SizedBox(height: 8),
+                        RichText(
+                          text: TextSpan(
+                            style: TT.sans(
+                                size: 30,
+                                weight: FontWeight.w800,
+                                color: TT.text,
+                                letterSpacing: -1,
+                                height: 1.05),
+                            children: [
+                              const TextSpan(text: 'Tu es à '),
+                              TextSpan(
+                                text: '2 menaces',
+                                style: TT.sans(
+                                    size: 30,
+                                    weight: FontWeight.w800,
+                                    color: TT.accent,
+                                    letterSpacing: -1),
+                              ),
+                              const TextSpan(text: '\nde manquer un breach.'),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          'Quota gratuit: 5 briefs/jour. Critiques bloquées hors heures ouvrées.',
+                          style: TT.sans(size: 13, color: TT.muted, height: 1.45),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  // Feature table
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: TT.line, width: 1),
+                    ),
+                    child: Column(
+                      children: [
+                        // Header
+                        Container(
+                          color: TT.surface,
+                          child: Row(children: [
+                            Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.all(10),
+                                child: Text('FEATURE',
+                                    style: TT.mono(
+                                        size: 9, letterSpacing: 1)),
+                              ),
+                            ),
+                            Container(
+                              width: 70,
+                              padding: const EdgeInsets.all(10),
+                              decoration: const BoxDecoration(
+                                border: Border(
+                                    left: BorderSide(
+                                        color: TT.line, width: 1))),
+                              child: Text('FREE',
+                                  textAlign: TextAlign.center,
+                                  style: TT.mono(
+                                      size: 9, letterSpacing: 1)),
+                            ),
+                            Container(
+                              width: 70,
+                              padding: const EdgeInsets.all(10),
+                              decoration: const BoxDecoration(
+                                border: Border(
+                                    left: BorderSide(
+                                        color: TT.line, width: 1))),
+                              child: Text('PRO',
+                                  textAlign: TextAlign.center,
+                                  style: TT.mono(
+                                      size: 9,
+                                      weight: FontWeight.w700,
+                                      color: TT.accent,
+                                      letterSpacing: 1)),
+                            ),
+                          ]),
+                        ),
+                        ...[
+                          ('Articles/jour', '5', '∞'),
+                          ('Alertes push', 'CRIT', 'TOUTES'),
+                          ('CVE complets', '○', '●'),
+                          ('Threat Intel', '○', '●'),
+                          ('Newsletter', '○', '●'),
+                          ('Export STIX', '○', '●'),
+                        ].asMap().entries.map((e) {
+                          final last = e.key == 5;
+                          final r = e.value;
+                          return Container(
+                            decoration: BoxDecoration(
+                              border: Border(
+                                top: const BorderSide(
+                                    color: TT.line, width: 1),
+                                bottom: last
+                                    ? BorderSide.none
+                                    : BorderSide.none,
+                              ),
+                            ),
+                            child: Row(children: [
+                              Expanded(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 11, vertical: 10),
+                                  child: Text(r.$1,
+                                      style: TT.sans(
+                                          size: 12, color: TT.text)),
+                                ),
+                              ),
+                              Container(
+                                width: 70,
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 11, vertical: 10),
+                                decoration: const BoxDecoration(
+                                  border: Border(
+                                      left: BorderSide(
+                                          color: TT.line, width: 1))),
+                                child: Text(r.$2,
+                                    textAlign: TextAlign.center,
+                                    style: TT.mono(
+                                        size: 11, color: TT.muted)),
+                              ),
+                              Container(
+                                width: 70,
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 11, vertical: 10),
+                                decoration: const BoxDecoration(
+                                  border: Border(
+                                      left: BorderSide(
+                                          color: TT.line, width: 1))),
+                                child: Text(r.$3,
+                                    textAlign: TextAlign.center,
+                                    style: TT.mono(
+                                        size: 11,
+                                        weight: FontWeight.w700,
+                                        color: TT.accent)),
+                              ),
+                            ]),
+                          );
+                        }),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  // Plans
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: _loading
+                        ? const Center(
+                            child: SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                    color: TT.accent, strokeWidth: 1.5)))
+                        : _buildPlans(),
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  // CTA
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: GestureDetector(
+                      onTap: _purchasing ? null : _purchase,
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        color: TT.accent,
+                        child: Center(
+                          child: _purchasing
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                      color: Colors.black, strokeWidth: 2))
+                              : Text('ESSAI 7 JOURS · GRATUIT →',
+                                  style: TT.mono(
+                                      size: 12,
+                                      weight: FontWeight.w700,
+                                      color: TT.bg,
+                                      letterSpacing: 1)),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  if (_error != null)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                      child: Text(_error!,
+                          style: TT.sans(size: 12, color: TT.red)),
+                    ),
+
+                  const SizedBox(height: 8),
+                  Center(
+                    child: GestureDetector(
+                      onTap: _purchasing ? null : _restore,
+                      child: Text('RESTAURER MES ACHATS',
+                          style: TT.mono(size: 10, color: TT.muted,
+                              letterSpacing: 0.5)),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Center(
+                    child: Text(
+                      'SANS ENGAGEMENT · ANNULE QUAND TU VEUX',
+                      style: TT.mono(size: 9, letterSpacing: 0.5),
+                    ),
+                  ),
+
+                  const SizedBox(height: 32),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPlans() {
+    if (_offerings?.current == null) return _buildFallbackPlans();
+
+    final packages = _offerings!.current!.availablePackages;
+    final yearly  = _findPackage(packages, '\$rc_annual', PackageType.annual);
+    final monthly = _findPackage(packages, '\$rc_monthly', PackageType.monthly);
+
+    return Column(children: [
+      if (yearly != null)
+        _buildPlanTile(
+          label: 'ANNUEL',
+          price: yearly.storeProduct.priceString,
+          perMonth: '≈ ${_yearlyPerMonth(yearly.storeProduct.price)}€/mois',
+          badge: '-33%',
+          isSelected: _yearlySelected,
+          onTap: () => setState(() { _yearlySelected = true; _selectedPackage = yearly; }),
+        ),
+      if (yearly != null && monthly != null) const SizedBox(height: 8),
+      if (monthly != null)
+        _buildPlanTile(
+          label: 'MENSUEL',
+          price: monthly.storeProduct.priceString,
+          isSelected: !_yearlySelected,
+          onTap: () => setState(() { _yearlySelected = false; _selectedPackage = monthly; }),
+        ),
+    ]);
+  }
+
+  Widget _buildFallbackPlans() {
+    return Column(children: [
+      _buildPlanTile(
+        label: 'ANNUEL',
+        price: '79,99€/an',
+        perMonth: '6,67€/mois',
+        badge: '-33%',
+        isSelected: _yearlySelected,
+        onTap: () => setState(() { _yearlySelected = true; _selectedPackage = null; }),
+      ),
+      const SizedBox(height: 8),
+      _buildPlanTile(
+        label: 'MENSUEL',
+        price: '9,99€/mois',
+        isSelected: !_yearlySelected,
+        onTap: () => setState(() { _yearlySelected = false; _selectedPackage = null; }),
+      ),
+    ]);
+  }
+
+  Widget _buildPlanTile({
     required String label,
     required String price,
     String? perMonth,
-    String? sublabel,
     String? badge,
     required bool isSelected,
     required VoidCallback onTap,
   }) {
     return GestureDetector(
       onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? const Color(0xFF135BEC).withValues(alpha: 0.12)
-              : Colors.white.withValues(alpha: 0.03),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: isSelected ? const Color(0xFF38BDF8) : Colors.white.withValues(alpha: 0.08),
-            width: isSelected ? 1.5 : 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            // Radio indicator
-            Container(
-              width: 22, height: 22,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: isSelected ? const Color(0xFF38BDF8) : Colors.white.withValues(alpha: 0.3),
-                  width: isSelected ? 6 : 2,
-                ),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: isSelected ? TT.accent : TT.line,
+                width: isSelected ? 1 : 1,
               ),
+              color: isSelected ? TT.accent.withOpacity(0.08) : Colors.transparent,
             ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(label, style: GoogleFonts.inter(
-                        fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white,
-                      )),
-                      if (badge != null) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.amber,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(badge, style: GoogleFonts.inter(
-                            fontSize: 9, fontWeight: FontWeight.bold, color: Colors.black,
-                          )),
-                        ),
-                      ],
-                    ],
-                  ),
-                  if (sublabel != null)
-                    Text(sublabel, style: GoogleFonts.inter(
-                      fontSize: 12, color: const Color(0xFF22C55E),
-                    )),
-                ],
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
               children: [
-                Text(price, style: GoogleFonts.inter(
-                  fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white,
-                )),
-                if (perMonth != null)
-                  Text(perMonth, style: GoogleFonts.inter(
-                    fontSize: 11, color: Colors.white.withValues(alpha: 0.4),
-                  )),
+                Text(label,
+                    style: TT.mono(
+                        size: 11,
+                        color: isSelected ? TT.accent : TT.muted,
+                        letterSpacing: 1)),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(price,
+                        style: TT.sans(
+                            size: isSelected ? 22 : 18,
+                            weight: FontWeight.w800,
+                            color: TT.text)),
+                    if (perMonth != null)
+                      Text(perMonth,
+                          style: TT.mono(size: 10, color: TT.muted)),
+                  ],
+                ),
               ],
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCTA() {
-    return SizedBox(
-      width: double.infinity,
-      height: 56,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF135BEC), Color(0xFF38BDF8)],
           ),
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF135BEC).withValues(alpha: 0.4),
-              blurRadius: 20, offset: const Offset(0, 8),
+          if (badge != null && isSelected)
+            Positioned(
+              top: -8, right: 10,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 6, vertical: 2),
+                color: TT.accent,
+                child: Text(badge,
+                    style: TT.mono(
+                        size: 9,
+                        weight: FontWeight.w700,
+                        color: TT.bg,
+                        letterSpacing: 1)),
+              ),
             ),
-          ],
-        ),
-        child: ElevatedButton(
-          onPressed: _purchasing ? null : _purchase,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.transparent,
-            shadowColor: Colors.transparent,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          ),
-          child: _purchasing
-              ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
-              : Text(
-                  'Commencer l\'essai gratuit 7 jours',
-                  style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-                ),
-        ),
+        ],
       ),
     );
   }

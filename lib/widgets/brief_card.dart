@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../models/brief_item.dart';
-import '../theme/app_colors.dart';
-import '../theme/app_text_styles.dart';
+import '../screens/article_browser_screen.dart';
+import '../theme/terminal_theme.dart';
+import 'terminal_widgets.dart';
 
-class BriefCard extends StatefulWidget {
+class BriefCard extends StatelessWidget {
   final BriefItem brief;
   final bool isUserPremium;
   final VoidCallback? onSubscribeTap;
@@ -16,418 +16,194 @@ class BriefCard extends StatefulWidget {
     this.onSubscribeTap,
   });
 
-  @override
-  State<BriefCard> createState() => _BriefCardState();
-}
+  String get _sevLevel => TerminalSevTag.fromSeverity(brief.severity);
 
-class _BriefCardState extends State<BriefCard>
-    with SingleTickerProviderStateMixin {
-  bool _isExpanded = false;
-  late AnimationController _controller;
-  late Animation<double> _expandAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 250),
-    );
-    _expandAnimation = CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeInOut,
-    );
+  String get _tag {
+    if (brief.cveTag != null && brief.cveTag!.isNotEmpty) return brief.cveTag!;
+    if (brief.mitreTag != null && brief.mitreTag!.isNotEmpty) return brief.mitreTag!;
+    return _sevLevel;
   }
 
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _toggleExpand() {
-    setState(() => _isExpanded = !_isExpanded);
-    _isExpanded ? _controller.forward() : _controller.reverse();
-  }
-
-  // ─── Couleurs selon sévérité ──────────────────────────────────────────────
-  Color get _severityColor {
-    switch (widget.brief.severity) {
-      case Severity.critical: return AppColors.critical;
-      case Severity.high:     return AppColors.high;
-      case Severity.medium:   return AppColors.medium;
-      case Severity.low:      return AppColors.low;
+  String _timeAgo() {
+    final now = DateTime.now();
+    final diff = now.difference(brief.publishedAt);
+    if (diff.inMinutes < 1) return 'now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m';
+    // Même jour → heure exacte
+    final pub = brief.publishedAt;
+    if (pub.year == now.year && pub.month == now.month && pub.day == now.day) {
+      final h = pub.hour.toString().padLeft(2, '0');
+      final m = pub.minute.toString().padLeft(2, '0');
+      return '$h:$m';
     }
+    if (diff.inDays == 1) return 'hier';
+    if (diff.inDays < 7) return '${diff.inDays}j';
+    return '${pub.day.toString().padLeft(2, '0')}/${pub.month.toString().padLeft(2, '0')}';
   }
 
-  Color get _severityBg {
-    switch (widget.brief.severity) {
-      case Severity.critical: return AppColors.criticalBg;
-      case Severity.high:     return AppColors.highBg;
-      case Severity.medium:   return AppColors.mediumBg;
-      case Severity.low:      return AppColors.lowBg;
-    }
+  String _readTime() {
+    final words = brief.body.split(' ').length;
+    final mins = (words / 200).ceil().clamp(1, 60);
+    return '$mins min';
   }
 
-  // ─── Indicateur latéral gauche (bordure colorée comme badge sévérité) ─────
-  Widget _buildLeftBorder() {
-    return Container(
-      width: 3,
-      decoration: BoxDecoration(
-        color: _severityColor,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(12),
-          bottomLeft: Radius.circular(12),
+  @override
+  Widget build(BuildContext context) {
+    final locked = brief.isPremium && !isUserPremium;
+
+    return GestureDetector(
+      onTap: locked
+          ? onSubscribeTap
+          : () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ArticleBrowserScreen(
+                    url: brief.sourceUrl,
+                    title: brief.headline,
+                  ),
+                ),
+              ),
+      child: Container(
+        decoration: const BoxDecoration(
+          border: Border(bottom: BorderSide(color: TT.line, width: 1)),
         ),
+        padding: const EdgeInsets.fromLTRB(12, 14, 12, 14),
+        child: locked ? _lockedRow() : _normalRow(),
       ),
     );
   }
 
-  // ─── Header : tag sévérité + time + tags MITRE/CVE ───────────────────────
-  Widget _buildHeader() {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        // Tag sévérité (= tag "1ER-MAI" de Brief.me)
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-          decoration: BoxDecoration(
-            color: _severityBg,
-            borderRadius: BorderRadius.circular(4),
-            border: Border.all(color: _severityColor.withOpacity(0.4)),
-          ),
-          child: Text(
-            widget.brief.severity.label,
-            style: AppTextStyles.mono.copyWith(color: _severityColor),
-          ),
-        ),
-        const Spacer(),
-        // Tags MITRE / CVE (monospace — côté geek)
-        if (widget.brief.cveTag != null) ...[
-          _buildMonoTag(widget.brief.cveTag!, AppColors.cyan),
-          const SizedBox(width: 6),
-        ],
-        if (widget.brief.mitreTag != null)
-          _buildMonoTag(widget.brief.mitreTag!, AppColors.textMuted),
-        const SizedBox(width: 8),
-        // Timestamp
-        Text(
-          _formatTime(widget.brief.publishedAt),
-          style: AppTextStyles.label.copyWith(color: AppColors.textMuted),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMonoTag(String label, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceElevated,
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Text(
-        label,
-        style: AppTextStyles.mono.copyWith(color: color),
-      ),
-    );
-  }
-
-  // ─── Corps principal ──────────────────────────────────────────────────────
-  Widget _buildBody() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Headline (toujours visible)
-        Text(widget.brief.headline, style: AppTextStyles.headline),
-        const SizedBox(height: 8),
-        // Body (tronqué si collapsed)
-        AnimatedCrossFade(
-          duration: const Duration(milliseconds: 200),
-          crossFadeState: _isExpanded
-              ? CrossFadeState.showSecond
-              : CrossFadeState.showFirst,
-          firstChild: Text(
-            widget.brief.body,
-            style: AppTextStyles.body,
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-          ),
-          secondChild: Text(
-            widget.brief.body,
-            style: AppTextStyles.body,
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ─── Section expanded : Why + Action ─────────────────────────────────────
-  Widget _buildExpandedDetails() {
-    return SizeTransition(
-      sizeFactor: _expandAnimation,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 12),
-          _buildDivider(),
-          const SizedBox(height: 12),
-          // Pourquoi c'est important
-          _buildDetailRow(
-            icon: '⚡',
-            label: 'Pourquoi c\'est grave',
-            content: widget.brief.whyMatters,
-            contentColor: AppColors.textPrimary,
-          ),
-          const SizedBox(height: 10),
-          // Action recommandée
-          _buildDetailRow(
-            icon: '🔧',
-            label: 'Quoi faire',
-            content: widget.brief.action,
-            contentColor: AppColors.cyan,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDetailRow({
-    required String icon,
-    required String label,
-    required String content,
-    required Color contentColor,
-  }) {
+  Widget _normalRow() {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(icon, style: const TextStyle(fontSize: 14)),
-        const SizedBox(width: 8),
+        // Left col: sev + time
+        SizedBox(
+          width: 54,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TerminalSevTag(level: _sevLevel),
+              const SizedBox(height: 4),
+              Text(_timeAgo(),
+                  style: TT.mono(size: 9, color: TT.muted)),
+            ],
+          ),
+        ),
+        const SizedBox(width: 10),
+        // Center col: content
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                label.toUpperCase(),
-                style: AppTextStyles.mono.copyWith(
-                  color: AppColors.textMuted,
-                  fontSize: 9,
-                ),
+                '${_tag.toUpperCase()} · ${brief.source.toUpperCase()}',
+                style: TT.mono(size: 9, letterSpacing: 0.5),
               ),
               const SizedBox(height: 2),
               Text(
-                content,
-                style: AppTextStyles.body.copyWith(
-                  color: contentColor,
-                  fontSize: 13,
-                ),
+                brief.headline,
+                style: TT.sans(
+                    size: 14,
+                    weight: FontWeight.w600,
+                    color: TT.text,
+                    height: 1.3),
               ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ─── Footer : source + expand toggle ─────────────────────────────────────
-  Widget _buildFooter() {
-    return Row(
-      children: [
-        // Lien source (= "Lire la suite" de Brief.me)
-        GestureDetector(
-          onTap: () => launchUrl(Uri.parse(widget.brief.sourceUrl)),
-          child: Row(
-            children: [
-              Icon(Icons.link, size: 13, color: AppColors.cyan),
-              const SizedBox(width: 4),
+              const SizedBox(height: 6),
               Text(
-                widget.brief.source,
-                style: AppTextStyles.label.copyWith(
-                  color: AppColors.cyan,
-                  decoration: TextDecoration.underline,
-                  decorationColor: AppColors.cyan,
-                ),
+                brief.body,
+                style: TT.sans(size: 12, color: TT.muted, height: 1.45),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(width: 2),
-              Icon(Icons.arrow_forward, size: 12, color: AppColors.cyan),
-            ],
-          ),
-        ),
-        const Spacer(),
-        // Toggle expand / collapse
-        GestureDetector(
-          onTap: _toggleExpand,
-          child: Row(
-            children: [
-              Text(
-                _isExpanded ? 'Réduire' : 'Détails',
-                style: AppTextStyles.label.copyWith(
-                  color: AppColors.textMuted,
-                ),
-              ),
-              const SizedBox(width: 4),
-              AnimatedRotation(
-                turns: _isExpanded ? 0.5 : 0,
-                duration: const Duration(milliseconds: 250),
-                child: Icon(
-                  Icons.keyboard_arrow_down,
-                  size: 16,
-                  color: AppColors.textMuted,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ─── Overlay Premium ──────────────────────────────────────────────────────
-  Widget _buildPremiumOverlay() {
-    return Positioned.fill(
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Stack(
-          children: [
-            // Flou gaussien
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    AppColors.surface.withOpacity(0.1),
-                    AppColors.surface.withOpacity(0.97),
+              if (_tag.startsWith('CVE') || brief.mitreTag != null) ...[
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 4,
+                  children: [
+                    if (_tag.startsWith('CVE'))
+                      _tagChip(_tag),
+                    if (brief.mitreTag != null)
+                      _tagChip(brief.mitreTag!),
                   ],
-                  stops: const [0.0, 0.45],
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(width: 8),
+        // Right col: read time
+        Text(_readTime(), style: TT.mono(size: 9, color: TT.muted)),
+      ],
+    );
+  }
+
+  Widget _lockedRow() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 54,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TerminalSevTag(level: _sevLevel),
+              const SizedBox(height: 4),
+              Text(_timeAgo(), style: TT.mono(size: 9, color: TT.muted)),
+            ],
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '${_tag.toUpperCase()} · ${brief.source.toUpperCase()}',
+                style: TT.mono(size: 9, letterSpacing: 0.5),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                brief.headline,
+                style: TT.sans(
+                    size: 14,
+                    weight: FontWeight.w600,
+                    color: TT.muted,
+                    height: 1.3),
+              ),
+              const SizedBox(height: 8),
+              GestureDetector(
+                onTap: onSubscribeTap,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: TT.accent.withOpacity(0.1),
+                    border: Border.all(color: TT.accent, width: 1),
+                  ),
+                  child: Text('PRO →',
+                      style: TT.mono(
+                          size: 10,
+                          weight: FontWeight.w700,
+                          color: TT.accent,
+                          letterSpacing: 1)),
                 ),
               ),
-            ),
-            // Contenu CTA
-            Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: AppColors.cyanSurface,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.cyan, width: 1.5),
-                    ),
-                    child: const Icon(
-                      Icons.lock_outline,
-                      color: AppColors.cyan,
-                      size: 22,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'Brief Premium',
-                    style: AppTextStyles.headline.copyWith(fontSize: 15),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Accès complet avec l\'abonnement',
-                    style: AppTextStyles.label.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  GestureDetector(
-                    onTap: widget.onSubscribeTap,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.ctaOrange,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Text(
-                        'Essayer 30 jours gratuits',
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ─── Helpers ──────────────────────────────────────────────────────────────
-  Widget _buildDivider() => Container(
-    height: 1,
-    color: AppColors.border,
-  );
-
-  String _formatTime(DateTime dt) {
-    final diff = DateTime.now().difference(dt);
-    if (diff.inMinutes < 60) return 'Il y a ${diff.inMinutes}min';
-    if (diff.inHours < 24)   return 'Il y a ${diff.inHours}h';
-    return 'Il y a ${diff.inDays}j';
-  }
-
-  // ─── BUILD ────────────────────────────────────────────────────────────────
-  @override
-  Widget build(BuildContext context) {
-    final bool showLocked =
-        widget.brief.isPremium && !widget.isUserPremium;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      child: Stack(
-        children: [
-          // Card principale
-          Container(
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.border, width: 1),
-            ),
-            child: IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Bordure gauche colorée (indicateur sévérité)
-                  _buildLeftBorder(),
-                  // Contenu
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(14),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildHeader(),
-                          const SizedBox(height: 10),
-                          _buildBody(),
-                          _buildExpandedDetails(),
-                          const SizedBox(height: 12),
-                          _buildDivider(),
-                          const SizedBox(height: 10),
-                          _buildFooter(),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            ],
           ),
-          // Overlay premium par-dessus
-          if (showLocked) _buildPremiumOverlay(),
-        ],
-      ),
+        ),
+        const SizedBox(width: 8),
+        const Icon(Icons.lock_outline, size: 12, color: TT.muted),
+      ],
     );
   }
+
+  Widget _tagChip(String label) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+        decoration: BoxDecoration(
+          border: Border.all(color: TT.line, width: 1),
+        ),
+        child: Text(label,
+            style: TT.mono(size: 9, color: TT.muted, letterSpacing: 0.3)),
+      );
 }
