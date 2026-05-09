@@ -462,6 +462,22 @@ app.post('/admin/reprocess/:id', adminAuth, async (req, res) => {
   }
 });
 
+// Reset quota journalier d'un user (ou tous)
+app.post('/admin/reset-quota', adminAuth, async (req, res) => {
+  try {
+    const { userId } = req.body;
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const where = userId
+      ? { userId, viewedAt: { gte: startOfDay } }
+      : { viewedAt: { gte: startOfDay } };
+    const result = await prisma.articleView.deleteMany({ where });
+    res.json({ deleted: result.count, userId: userId || 'all' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Publier tous les drafts d'un coup
 app.post('/admin/publish-all-drafts', adminAuth, async (req, res) => {
   try {
