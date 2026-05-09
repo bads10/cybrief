@@ -119,7 +119,7 @@ async function ingestFeed(feed) {
         affectedSystems: ai.affectedSystems || '',
         iocs:            ai.iocs            || '',
         url:             item.link,
-        status:          'DRAFT',
+        status:          'PUBLISHED',
       },
     });
 

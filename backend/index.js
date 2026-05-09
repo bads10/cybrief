@@ -462,6 +462,19 @@ app.post('/admin/reprocess/:id', adminAuth, async (req, res) => {
   }
 });
 
+// Publier tous les drafts d'un coup
+app.post('/admin/publish-all-drafts', adminAuth, async (req, res) => {
+  try {
+    const result = await prisma.article.updateMany({
+      where: { status: 'DRAFT' },
+      data:  { status: 'PUBLISHED' },
+    });
+    res.json({ published: result.count });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post('/admin/reprocess-all', adminAuth, async (req, res) => {
   try {
     const drafts = await prisma.article.findMany({ where: { status: 'DRAFT' } });
