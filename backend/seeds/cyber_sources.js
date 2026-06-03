@@ -9,22 +9,22 @@ const SOURCES = [
   // ── Françaises ────────────────────────────────────────────────────────────
   {
     name: 'CERT-FR Avis',
-    url: 'https://www.cert.ssi.gouv.fr/feed/avis/',
+    url: 'https://www.cert.ssi.gouv.fr/avis/feed/',
     category: 'CERT',
   },
   {
     name: 'CERT-FR Alertes',
-    url: 'https://www.cert.ssi.gouv.fr/feed/alerte/',
+    url: 'https://www.cert.ssi.gouv.fr/alerte/feed/',
     category: 'CERT',
   },
   {
-    name: 'ANSSI Actualités',
-    url: 'https://cyber.gouv.fr/actualites/feed',
+    name: 'CERT-FR Actualités',
+    url: 'https://www.cert.ssi.gouv.fr/actualite/feed/',
     category: 'CERT',
   },
   {
-    name: 'LeMagIT Sécurité',
-    url: 'https://www.lemagit.fr/rss/Security.xml',
+    name: 'IT-Connect',
+    url: 'https://www.it-connect.fr/feed/',
     category: 'News',
   },
   {
@@ -36,7 +36,7 @@ const SOURCES = [
   // ── Threat Intelligence ───────────────────────────────────────────────────
   {
     name: 'Cisco Talos',
-    url: 'https://blog.talosintelligence.com/feeds/posts/default',
+    url: 'https://feeds.feedburner.com/feedburner/Talos',
     category: 'ThreatIntel',
   },
   {
@@ -45,8 +45,8 @@ const SOURCES = [
     category: 'ThreatIntel',
   },
   {
-    name: 'Google Threat Analysis',
-    url: 'https://blog.google/threat-analysis-group/rss/',
+    name: 'GreyNoise',
+    url: 'https://www.greynoise.io/blog/rss.xml',
     category: 'ThreatIntel',
   },
   {
@@ -78,7 +78,7 @@ const SOURCES = [
   },
   {
     name: 'Rapid7 Blog',
-    url: 'https://www.rapid7.com/blog/feed/',
+    url: 'https://www.rapid7.com/blog/rss/',
     category: 'CVE',
   },
   {
@@ -110,7 +110,12 @@ const SOURCES = [
   },
   {
     name: 'Dark Reading',
-    url: 'https://www.darkreading.com/rss_simple.asp',
+    url: 'https://www.darkreading.com/rss.xml',
+    category: 'News',
+  },
+  {
+    name: 'Sophos Naked Security',
+    url: 'https://news.sophos.com/feed/',
     category: 'News',
   },
   {
