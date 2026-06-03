@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import '../theme/terminal_theme.dart';
 
 class ArticleBrowserScreen extends StatefulWidget {
   final String url;
@@ -19,7 +19,7 @@ class ArticleBrowserScreen extends StatefulWidget {
 
 class _ArticleBrowserScreenState extends State<ArticleBrowserScreen> {
   late final WebViewController _controller;
-  int _loadingProgress = 0;
+  int _progress = 0;
   String _currentUrl = '';
   bool _canGoBack = false;
 
@@ -29,157 +29,135 @@ class _ArticleBrowserScreenState extends State<ArticleBrowserScreen> {
     _currentUrl = widget.url;
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(const Color(0xFF0F172A))
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onProgress: (progress) {
-            setState(() => _loadingProgress = progress);
-          },
-          onPageStarted: (url) {
-            setState(() => _currentUrl = url);
-            _updateCanGoBack();
-          },
-          onPageFinished: (url) {
-            setState(() {
-              _currentUrl = url;
-              _loadingProgress = 100;
-            });
-            _updateCanGoBack();
-          },
-          onNavigationRequest: (request) => NavigationDecision.navigate,
-        ),
-      )
+      ..setBackgroundColor(TT.bg)
+      ..setNavigationDelegate(NavigationDelegate(
+        onProgress: (p) => setState(() => _progress = p),
+        onPageStarted: (url) {
+          setState(() => _currentUrl = url);
+          _refreshBack();
+        },
+        onPageFinished: (url) {
+          setState(() { _currentUrl = url; _progress = 100; });
+          _refreshBack();
+        },
+        onNavigationRequest: (_) => NavigationDecision.navigate,
+      ))
       ..loadRequest(Uri.parse(widget.url));
   }
 
-  Future<void> _updateCanGoBack() async {
-    final canGoBack = await _controller.canGoBack();
-    if (mounted) setState(() => _canGoBack = canGoBack);
+  Future<void> _refreshBack() async {
+    final v = await _controller.canGoBack();
+    if (mounted) setState(() => _canGoBack = v);
   }
 
-  /// Extrait le domaine lisible depuis l'URL courante
   String get _domain {
     try {
-      final host = Uri.parse(_currentUrl).host;
-      return host.replaceAll('www.', '');
+      return Uri.parse(_currentUrl).host.replaceAll('www.', '');
     } catch (_) {
-      return widget.title;
+      return '';
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF0F172A),
-        elevation: 0,
-        // Bouton fermer (X) — retour vers l'écran précédent
-        leading: IconButton(
-          icon: const Icon(LucideIcons.x, color: Colors.white, size: 20),
-          onPressed: () => Navigator.pop(context),
-          tooltip: 'Fermer',
-        ),
-        // Titre centré : domaine + état de chargement
-        title: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              _domain.isNotEmpty ? _domain : widget.title,
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            if (_loadingProgress < 100)
-              Text(
-                'Chargement…',
-                style: GoogleFonts.inter(
-                  fontSize: 10,
-                  color: Colors.white38,
-                ),
-              ),
-          ],
-        ),
-        centerTitle: true,
-        // Barre de progression sous l'AppBar
-        bottom: _loadingProgress < 100
-            ? PreferredSize(
-                preferredSize: const Size.fromHeight(2),
-                child: LinearProgressIndicator(
-                  value: _loadingProgress / 100.0,
-                  backgroundColor: Colors.white10,
-                  valueColor: const AlwaysStoppedAnimation<Color>(
-                    Color(0xFF38BDF8),
-                  ),
-                ),
-              )
-            : null,
-        actions: [
-          // Bouton retour dans l'historique web
-          if (_canGoBack)
-            IconButton(
-              icon: const Icon(
-                LucideIcons.chevronLeft,
-                color: Colors.white,
-                size: 20,
-              ),
-              onPressed: () => _controller.goBack(),
-              tooltip: 'Page précédente',
-            ),
-          // Bouton rafraîchir
-          IconButton(
-            icon: const Icon(LucideIcons.refreshCw, color: Colors.white54, size: 18),
-            onPressed: () => _controller.reload(),
-            tooltip: 'Recharger',
-          ),
-          const SizedBox(width: 4),
-        ],
-      ),
-      body: Stack(
+      backgroundColor: TT.bg,
+      body: Column(
         children: [
-          WebViewWidget(controller: _controller),
-          // Barre d'adresse discrète en bas
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                color: const Color(0xFF0F172A).withValues(alpha: 0.95),
-                border: Border(
-                  top: BorderSide(
-                    color: Colors.white.withValues(alpha: 0.06),
+          SizedBox(height: MediaQuery.of(context).padding.top),
+
+          // Topbar
+          Container(
+            height: 40,
+            decoration: const BoxDecoration(
+              color: TT.bg,
+              border: Border(bottom: BorderSide(color: TT.line, width: 1)),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Row(
+              children: [
+                // Close
+                GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                    child: Icon(LucideIcons.x, size: 16, color: TT.muted),
                   ),
                 ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    LucideIcons.lock,
-                    size: 12,
-                    color: Colors.white.withValues(alpha: 0.3),
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      _currentUrl,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        color: Colors.white.withValues(alpha: 0.35),
+                // Domain + loading state
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        _domain.isNotEmpty ? _domain : widget.title,
+                        style: TT.mono(size: 10, color: TT.text, letterSpacing: 0.3),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
                       ),
+                      if (_progress < 100)
+                        Text('chargement…',
+                            style: TT.mono(size: 9, color: TT.muted)),
+                    ],
+                  ),
+                ),
+                // Back / Reload
+                if (_canGoBack)
+                  GestureDetector(
+                    onTap: () => _controller.goBack(),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
+                      child: Icon(LucideIcons.chevronLeft, size: 16, color: TT.muted),
                     ),
                   ),
-                ],
-              ),
+                GestureDetector(
+                  onTap: () => _controller.reload(),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                    child: Icon(LucideIcons.refreshCw, size: 14, color: TT.muted),
+                  ),
+                ),
+              ],
             ),
           ),
+
+          // Progress bar
+          if (_progress < 100)
+            LinearProgressIndicator(
+              value: _progress / 100.0,
+              minHeight: 2,
+              backgroundColor: TT.line,
+              valueColor: const AlwaysStoppedAnimation<Color>(TT.accent),
+            ),
+
+          // WebView
+          Expanded(child: WebViewWidget(controller: _controller)),
+
+          // URL bar
+          Container(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+            decoration: const BoxDecoration(
+              color: TT.bg,
+              border: Border(top: BorderSide(color: TT.line, width: 1)),
+            ),
+            child: Row(
+              children: [
+                Icon(LucideIcons.lock, size: 10, color: TT.line),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    _currentUrl,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TT.mono(size: 10, color: TT.muted),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          SizedBox(height: MediaQuery.of(context).padding.bottom),
         ],
       ),
     );

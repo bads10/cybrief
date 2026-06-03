@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
+import '../services/user_service.dart';
 import 'legal_screen.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -16,11 +18,14 @@ class _SignupScreenState extends State<SignupScreen> {
   final _nameCtrl     = TextEditingController();
   final _emailCtrl    = TextEditingController();
   final _passwordCtrl = TextEditingController();
-  bool _receiveDaily  = true;
-  bool _loading       = false;
-  bool _loadingGoogle = false;
-  bool _showPassword  = false;
+  bool _receiveDaily   = true;
+  bool _loading        = false;
+  bool _loadingGoogle  = false;
+  bool _loadingApple   = false;
+  bool _showPassword   = false;
   String? _error;
+
+  static final _emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
 
   @override
   void dispose() {
@@ -69,6 +74,10 @@ class _SignupScreenState extends State<SignupScreen> {
       setState(() => _error = 'Remplis tous les champs.');
       return;
     }
+    if (!_emailRegex.hasMatch(email)) {
+      setState(() => _error = 'Adresse e-mail invalide.');
+      return;
+    }
     if (password.length < 6) {
       setState(() => _error = 'Le mot de passe doit contenir au moins 6 caractères.');
       return;
@@ -86,17 +95,18 @@ class _SignupScreenState extends State<SignupScreen> {
     setState(() => _loading = false);
 
     if (result.success) {
+      // Sync user in backend + save newsletter preference
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid != null) {
+        await UserService.syncUser(uid: uid, email: email, displayName: name);
+        if (_receiveDaily) {
+          await UserService.updateUser(uid, {
+            'newsletterSubscribed': true,
+            'newsletterFrequency': 'daily',
+          });
+        }
+      }
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Compte créé ! Vérifie ton email pour confirmer ton inscription.',
-            style: GoogleFonts.inter(),
-          ),
-          backgroundColor: const Color(0xFF22C55E),
-          duration: const Duration(seconds: 5),
-        ),
-      );
       Navigator.pushReplacementNamed(context, '/flux');
     } else {
       setState(() => _error = result.error);
@@ -105,12 +115,21 @@ class _SignupScreenState extends State<SignupScreen> {
 
   Future<void> _signupWithGoogle() async {
     setState(() { _loadingGoogle = true; _error = null; });
-
     final result = await AuthService.signInWithGoogle();
-
     if (!mounted) return;
     setState(() => _loadingGoogle = false);
+    if (result.success) {
+      Navigator.pushReplacementNamed(context, '/flux');
+    } else {
+      setState(() => _error = result.error);
+    }
+  }
 
+  Future<void> _signupWithApple() async {
+    setState(() { _loadingApple = true; _error = null; });
+    final result = await AuthService.signInWithApple();
+    if (!mounted) return;
+    setState(() => _loadingApple = false);
     if (result.success) {
       Navigator.pushReplacementNamed(context, '/flux');
     } else {
@@ -158,6 +177,10 @@ class _SignupScreenState extends State<SignupScreen> {
 
               // ── Bouton Google ─────────────────────────────────────────────
               _buildGoogleButton(),
+              const SizedBox(height: 12),
+
+              // ── Bouton Apple ──────────────────────────────────────────────
+              _buildAppleButton(),
               const SizedBox(height: 24),
 
               // ── Séparateur ────────────────────────────────────────────────
@@ -357,9 +380,39 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
+  Widget _buildAppleButton() {
+    return OutlinedButton(
+      onPressed: (_loading || _loadingGoogle || _loadingApple) ? null : _signupWithApple,
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size(double.infinity, 56),
+        side: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        backgroundColor: Colors.white,
+      ),
+      child: _loadingApple
+          ? const SizedBox(
+              width: 20, height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
+          : Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.apple, color: Colors.black, size: 24),
+                const SizedBox(width: 12),
+                Text(
+                  "S'inscrire avec Apple",
+                  style: GoogleFonts.inter(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black),
+                ),
+              ],
+            ),
+    );
+  }
+
   Widget _buildGoogleButton() {
     return OutlinedButton(
-      onPressed: (_loading || _loadingGoogle) ? null : _signupWithGoogle,
+      onPressed: (_loading || _loadingGoogle || _loadingApple) ? null : _signupWithGoogle,
       style: OutlinedButton.styleFrom(
         minimumSize: const Size(double.infinity, 56),
         side: BorderSide(color: Colors.white.withValues(alpha: 0.15)),

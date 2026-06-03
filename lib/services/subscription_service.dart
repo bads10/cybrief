@@ -11,7 +11,7 @@ class SubscriptionService {
 
   // API Keys RevenueCat
   static const String _appleApiKey  = 'appl_owCkvISMMaJfIPhBtXPUasGIVWB';
-  static const String _googleApiKey = 'goog_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
+  static const String _googleApiKey = 'goog_FdEnmWrkQPBZpJOswgfSSNERcSh';
 
   static bool _initialized = false;
 

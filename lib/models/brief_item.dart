@@ -60,7 +60,7 @@ class BriefItem {
     );
   }
 
-  factory BriefItem.fromJson(Map<String, dynamic> json) {
+  factory BriefItem.fromJson(Map<String, dynamic> json, {String lang = 'fr'}) {
     // Mapping des sévérités depuis le backend
     final crit = json['criticality']?.toString().toLowerCase() ?? 'medium';
     Severity severity = Severity.medium;
@@ -70,11 +70,19 @@ class BriefItem {
     else if (crit.contains('moy') || crit.contains('med')) severity = Severity.medium;
     else if (crit.contains('fai') || crit.contains('low')) severity = Severity.low;
 
+    // Sélection langue avec fallback FR
+    final titleEn = json['titleEn']?.toString() ?? '';
+    final summaryEn = json['summaryEn']?.toString() ?? '';
+    final titleFr = json['title']?.toString() ?? '';
+    final summaryFr = json['summary']?.toString() ?? '';
+    final headline = (lang == 'en' && titleEn.isNotEmpty) ? titleEn : titleFr;
+    final body = (lang == 'en' && summaryEn.isNotEmpty) ? summaryEn : summaryFr;
+
     return BriefItem(
       id: json['id']?.toString() ?? '',
       severity: severity,
-      headline: json['title'] ?? '',
-      body: json['summary'] ?? '',
+      headline: headline,
+      body: body,
       whyMatters: (json['attackType'] != null && json['attackType'].toString().isNotEmpty)
           ? json['attackType']
           : 'Analyse en cours par nos experts.',

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:math' as math;
 import '../widgets/custom_bottom_nav_bar.dart';
-
-const String _kBaseUrl = 'https://cybrief-production.up.railway.app';
+import '../widgets/terminal_widgets.dart';
+import '../theme/terminal_theme.dart';
+import '../services/api_constants.dart';
 
 class StatsScreen extends StatefulWidget {
   const StatsScreen({super.key});
@@ -25,88 +25,246 @@ class _StatsScreenState extends State<StatsScreen> {
   }
 
   Future<void> _load() async {
+    setState(() => _loading = true);
     try {
-      final r = await http.get(Uri.parse('$_kBaseUrl/api/stats'));
+      final r = await http.get(Uri.parse('$kApiBaseUrl/api/stats'))
+          .timeout(const Duration(seconds: 10));
       if (r.statusCode == 200) {
         setState(() { _stats = json.decode(r.body); _loading = false; });
+      } else {
+        setState(() => _loading = false);
       }
     } catch (_) {
       setState(() => _loading = false);
     }
   }
 
+  String _dateLabel() {
+    final now = DateTime.now();
+    final day = now.day.toString().padLeft(2, '0');
+    final month = now.month.toString().padLeft(2, '0');
+    return '$day.$month';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        automaticallyImplyLeading: false,
-        title: Text('STATS', style: GoogleFonts.inter(
-          fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white, letterSpacing: 1.5,
-        )),
-        actions: [
-          IconButton(
-            icon: const Icon(LucideIcons.refreshCw, color: Colors.white54, size: 18),
-            onPressed: () { setState(() => _loading = true); _load(); },
+      backgroundColor: TT.bg,
+      body: Column(
+        children: [
+          SizedBox(height: MediaQuery.of(context).padding.top),
+          TerminalTopBar(
+            label: 'STATS // ${_dateLabel()}',
+            right: _loading ? 'CHARGEMENT…' : '↻ REFRESH',
+            onRightTap: _loading ? null : _load,
+          ),
+          Expanded(
+            child: _loading
+                ? const Center(
+                    child: SizedBox(
+                      width: 20, height: 20,
+                      child: CircularProgressIndicator(
+                          color: TT.accent, strokeWidth: 1.5),
+                    ),
+                  )
+                : _stats == null
+                    ? _buildError()
+                    : RefreshIndicator(
+                        onRefresh: _load,
+                        color: TT.accent,
+                        backgroundColor: TT.surface,
+                        child: SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          child: _buildContent(),
+                        ),
+                      ),
           ),
         ],
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator(color: Color(0xFF38BDF8)))
-          : _stats == null
-              ? _errorState()
-              : RefreshIndicator(
-                  onRefresh: _load,
-                  color: const Color(0xFF38BDF8),
-                  child: SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildHeroCard(),
-                        const SizedBox(height: 24),
-                        _buildSectionTitle('Répartition par criticité'),
-                        const SizedBox(height: 14),
-                        _buildCriticalityBars(),
-                        const SizedBox(height: 24),
-                        _buildSectionTitle('Top menaces actives'),
-                        const SizedBox(height: 14),
-                        _buildTopAttacks(),
-                        const SizedBox(height: 24),
-                        _buildSectionTitle('Tags les plus fréquents'),
-                        const SizedBox(height: 14),
-                        _buildTopTags(),
-                        if ((_stats!['cves'] as List).isNotEmpty) ...[
-                          const SizedBox(height: 24),
-                          _buildSectionTitle('CVEs récents'),
-                          const SizedBox(height: 14),
-                          _buildCveList(),
-                        ],
-                        const SizedBox(height: 20),
-                      ],
-                    ),
-                  ),
-                ),
       bottomNavigationBar: const CustomBottomNavBar(currentIndex: 2),
     );
   }
 
-  Widget _buildHeroCard() {
-    final total = _stats!['total'] as int? ?? 0;
-    final last24h = _stats!['last24h'] as int? ?? 0;
-    final critique = _stats!['critique'] as int? ?? 0;
-    return Container(
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF135BEC), Color(0xFF38BDF8)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+  Widget _buildContent() {
+    final total  = _stats!['total']    as int? ?? 0;
+    final crit   = _stats!['critique'] as int? ?? 0;
+    final high   = _stats!['eleve']    as int? ?? 0;
+    final med    = _stats!['moyen']    as int? ?? 0;
+    final low    = _stats!['faible']   as int? ?? 0;
+    final tags   = (_stats!['topTags']    as List? ?? []);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Volume hero
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 14, 12, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('VOL · 24H',
+                  style: TT.mono(size: 10, color: TT.muted, letterSpacing: 1)),
+              const SizedBox(height: 4),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text('$total',
+                      style: TT.sans(
+                          size: 40,
+                          weight: FontWeight.w800,
+                          color: TT.text,
+                          letterSpacing: -1.5)),
+                  const SizedBox(width: 8),
+                  Text('+TOTAL',
+                      style: TT.mono(size: 12, color: TT.green)),
+                ],
+              ),
+              const SizedBox(height: 8),
+              // Sparkline (synthetic)
+              SizedBox(
+                height: 50,
+                child: _buildSparkline(),
+              ),
+              const SizedBox(height: 4),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('J-30', style: TT.mono(size: 9)),
+                  Text('J-15', style: TT.mono(size: 9)),
+                  Text('NOW', style: TT.mono(size: 9)),
+                ],
+              ),
+            ],
+          ),
         ),
-        borderRadius: BorderRadius.circular(20),
+
+        Container(
+            height: 1, margin: const EdgeInsets.only(top: 12), color: TT.line),
+
+        // Severity distribution header
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('RÉPARTITION CRITICITÉ',
+                  style: TT.mono(size: 10, color: TT.muted, letterSpacing: 1)),
+              Text('30 J', style: TT.mono(size: 9)),
+            ],
+          ),
+        ),
+
+        // Severity rows
+        ...[
+          ('CRITIQUE', crit,  TT.red,    total),
+          ('ÉLEVÉ',    high,  TT.orange, total),
+          ('MOYEN',    med,   TT.yellow, total),
+          ('FAIBLE',   low,   TT.green,  total),
+        ].map((e) => _buildSevRow(e.$1, e.$2, e.$3, e.$4)),
+
+        Container(height: 1, color: TT.line),
+
+        // Top tags
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+          child: Text('TOP TAGS',
+              style: TT.mono(size: 10, color: TT.muted, letterSpacing: 1)),
+        ),
+        if (tags.isEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+            child: Text('—', style: TT.mono(size: 12, color: TT.muted)),
+          )
+        else
+          ...List.generate(
+            math.min(tags.length, 6),
+            (i) {
+              final tag = tags[i];
+              final count = (tag['count'] as int? ?? 0);
+              return Container(
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                decoration: const BoxDecoration(
+                  border: Border(
+                      bottom: BorderSide(color: TT.line, width: 1)),
+                ),
+                child: Row(
+                  children: [
+                    Text('${(i + 1).toString().padLeft(2, '0')}',
+                        style: TT.mono(size: 11, color: TT.muted)),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text('${tag['tag']}',
+                          style: TT.sans(
+                              size: 13,
+                              weight: FontWeight.w600,
+                              color: TT.text)),
+                    ),
+                    Text('$count',
+                        style: TT.mono(
+                            size: 11,
+                            weight: FontWeight.w700,
+                            color: TT.accent)),
+                  ],
+                ),
+              );
+            },
+          ),
+
+        const SizedBox(height: 32),
+      ],
+    );
+  }
+
+  Widget _buildSparkline() {
+    // Répartition réelle : une barre par sévérité, proportionnelle au total
+    final total  = (_stats!['total']    as int? ?? 0);
+    final crit   = (_stats!['critique'] as int? ?? 0);
+    final high   = (_stats!['eleve']    as int? ?? 0);
+    final med    = (_stats!['moyen']    as int? ?? 0);
+    final low    = (_stats!['faible']   as int? ?? 0);
+
+    if (total == 0) {
+      return Container(
+        height: 50,
+        alignment: Alignment.center,
+        child: Text('Aucune donnée disponible',
+            style: TT.mono(size: 10, color: TT.muted)),
+      );
+    }
+
+    final bars = [
+      (count: crit, color: TT.red),
+      (count: high, color: TT.orange),
+      (count: med,  color: TT.yellow),
+      (count: low,  color: TT.green),
+    ];
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: bars.expand((bar) {
+        final pct = bar.count / total;
+        final segments = (pct * 20).round().clamp(1, 20);
+        return List.generate(segments, (j) {
+          final h = 10.0 + (bar.count / total) * 38;
+          return Expanded(
+            child: Container(
+              margin: const EdgeInsets.only(right: 1),
+              height: h.clamp(4.0, 50.0),
+              color: bar.color.withOpacity(0.7),
+            ),
+          );
+        });
+      }).toList(),
+    );
+  }
+
+  Widget _buildSevRow(String label, int count, Color color, int total) {
+    final pct = total > 0 ? (count / total).clamp(0.0, 1.0) : 0.0;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: TT.line, width: 1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -114,168 +272,61 @@ class _StatsScreenState extends State<StatsScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Articles publiés', style: GoogleFonts.inter(
-                color: Colors.white.withValues(alpha: 0.85), fontSize: 13, fontWeight: FontWeight.w500,
-              )),
-              const Icon(LucideIcons.chartBarBig, color: Colors.white, size: 20),
+              Text(label,
+                  style: TT.mono(
+                      size: 11,
+                      weight: FontWeight.w700,
+                      color: color,
+                      letterSpacing: 0.6)),
+              Text(count.toString().padLeft(3, '0'),
+                  style: TT.mono(
+                      size: 11,
+                      weight: FontWeight.w700,
+                      color: TT.text)),
             ],
           ),
-          const SizedBox(height: 10),
-          Text('$total', style: GoogleFonts.libreBaskerville(
-            color: Colors.white, fontSize: 52, fontWeight: FontWeight.bold,
-          )),
-          const SizedBox(height: 8),
-          Row(children: [
-            _heroBadge('$last24h dernières 24h', Colors.white.withValues(alpha: 0.2)),
-            const SizedBox(width: 8),
-            if (critique > 0) _heroBadge('$critique critiques', const Color(0xFFEF4444).withValues(alpha: 0.4)),
-          ]),
+          const SizedBox(height: 4),
+          Stack(
+            children: [
+              Container(height: 4, color: TT.line),
+              FractionallySizedBox(
+                widthFactor: pct,
+                child: Container(height: 4, color: color),
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
 
-  Widget _heroBadge(String text, Color bg) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-    decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
-    child: Text(text, style: GoogleFonts.inter(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
-  );
-
-  Widget _buildSectionTitle(String title) => Text(title, style: GoogleFonts.inter(
-    fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white,
-  ));
-
-  Widget _buildCriticalityBars() {
-    final total = (_stats!['total'] as int? ?? 1).clamp(1, 9999);
-    final items = [
-      {'label': 'CRITIQUE', 'count': _stats!['critique'] as int? ?? 0, 'color': const Color(0xFFEF4444)},
-      {'label': 'ÉLEVÉ',    'count': _stats!['eleve']    as int? ?? 0, 'color': const Color(0xFFF97316)},
-      {'label': 'MOYEN',    'count': _stats!['moyen']    as int? ?? 0, 'color': const Color(0xFFFBBF24)},
-      {'label': 'FAIBLE',   'count': _stats!['faible']   as int? ?? 0, 'color': const Color(0xFF22C55E)},
-    ];
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.03),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
-      ),
+  Widget _buildError() {
+    return Center(
       child: Column(
-        children: items.map((item) {
-          final count = item['count'] as int;
-          final color = item['color'] as Color;
-          final pct = count / total;
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 14),
-            child: Column(
-              children: [
-                Row(children: [
-                  Text(item['label'] as String, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: color)),
-                  const Spacer(),
-                  Text('$count', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white)),
-                ]),
-                const SizedBox(height: 6),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: pct,
-                    backgroundColor: Colors.white.withValues(alpha: 0.08),
-                    valueColor: AlwaysStoppedAnimation<Color>(color),
-                    minHeight: 6,
-                  ),
-                ),
-              ],
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('[ ERREUR ]',
+              style: TT.mono(size: 12, color: TT.red, letterSpacing: 1)),
+          const SizedBox(height: 12),
+          Text('Impossible de charger les stats',
+              style: TT.sans(size: 13, color: TT.muted)),
+          const SizedBox(height: 16),
+          GestureDetector(
+            onTap: _load,
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(border: Border.all(color: TT.accent)),
+              child: Text('RÉESSAYER',
+                  style: TT.mono(
+                      size: 11,
+                      weight: FontWeight.w700,
+                      color: TT.accent,
+                      letterSpacing: 1)),
             ),
-          );
-        }).toList(),
+          ),
+        ],
       ),
     );
   }
-
-  Widget _buildTopAttacks() {
-    final attacks = (_stats!['topAttacks'] as List? ?? []);
-    if (attacks.isEmpty) return _emptyChip('Aucun type d\'attaque détecté');
-    return Wrap(
-      spacing: 8, runSpacing: 8,
-      children: attacks.map((a) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: const Color(0xFFA78BFA).withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFFA78BFA).withValues(alpha: 0.25)),
-        ),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          const Icon(LucideIcons.crosshair, size: 12, color: Color(0xFFA78BFA)),
-          const SizedBox(width: 6),
-          Text('${a['type']}', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFFA78BFA))),
-          const SizedBox(width: 6),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-            decoration: BoxDecoration(color: const Color(0xFFA78BFA).withValues(alpha: 0.2), borderRadius: BorderRadius.circular(10)),
-            child: Text('${a['count']}', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFFA78BFA))),
-          ),
-        ]),
-      )).toList(),
-    );
-  }
-
-  Widget _buildTopTags() {
-    final tags = (_stats!['topTags'] as List? ?? []);
-    if (tags.isEmpty) return _emptyChip('Aucun tag');
-    return Wrap(
-      spacing: 8, runSpacing: 8,
-      children: tags.map((t) {
-        final count = t['count'] as int? ?? 0;
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: const Color(0xFF38BDF8).withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFF38BDF8).withValues(alpha: 0.2)),
-          ),
-          child: Text('${t['tag']}  $count', style: GoogleFonts.inter(
-            fontSize: 12, fontWeight: FontWeight.w500, color: const Color(0xFF38BDF8),
-          )),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildCveList() {
-    final cves = (_stats!['cves'] as List? ?? []);
-    return Wrap(
-      spacing: 8, runSpacing: 8,
-      children: cves.map((cve) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: const Color(0xFFEF4444).withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.2)),
-        ),
-        child: Text('$cve', style: GoogleFonts.inter(
-          fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFFEF4444),
-        )),
-      )).toList(),
-    );
-  }
-
-  Widget _emptyChip(String text) => Container(
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: Colors.white.withValues(alpha: 0.03),
-      borderRadius: BorderRadius.circular(12),
-    ),
-    child: Text(text, style: GoogleFonts.inter(color: Colors.white.withValues(alpha: 0.3), fontSize: 13)),
-  );
-
-  Widget _errorState() => Center(
-    child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-      Icon(LucideIcons.wifiOff, size: 48, color: Colors.white.withValues(alpha: 0.2)),
-      const SizedBox(height: 16),
-      Text('Impossible de charger les stats', style: GoogleFonts.inter(color: Colors.white.withValues(alpha: 0.4))),
-      const SizedBox(height: 16),
-      TextButton(onPressed: () { setState(() => _loading = true); _load(); },
-        child: const Text('Réessayer', style: TextStyle(color: Color(0xFF38BDF8)))),
-    ]),
-  );
 }

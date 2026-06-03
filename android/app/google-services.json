@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "694709746993",
+    "project_id": "gen-lang-client-0845651189",
+    "storage_bucket": "gen-lang-client-0845651189.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:694709746993:android:77684bd4e6787dfc768410",
+        "android_client_info": {
+          "package_name": "fr.cybrief.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "694709746993-5fqeqdrannst1ui58fj0f08avf28d0m1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAdMFoGS5wpuSwQv9vJ3148cV6zD6VpTxE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "694709746993-5fqeqdrannst1ui58fj0f08avf28d0m1.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "694709746993-8jcdtq1ud1gem5ihdiki58untcjf1e2a.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.badaoui.cybrief"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

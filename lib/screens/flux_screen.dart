@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import '../models/brief_item.dart';
 import '../widgets/brief_card.dart';
 import '../widgets/custom_bottom_nav_bar.dart';
@@ -113,8 +114,19 @@ class _FluxScreenState extends State<FluxScreen> {
             displayName: user.displayName),
         _checkPremium(),
       ]);
+      // Sauvegarder le token FCM après que l'user existe en DB
+      _saveFcmToken(user.uid);
     }
     await _fetchBriefs();
+  }
+
+  Future<void> _saveFcmToken(String uid) async {
+    try {
+      final token = await FirebaseMessaging.instance.getToken();
+      if (token != null) {
+        await UserService.updateUser(uid, {'fcmToken': token});
+      }
+    } catch (_) {}
   }
 
   Future<void> _checkPremium() async {
@@ -157,7 +169,7 @@ class _FluxScreenState extends State<FluxScreen> {
         }
         setState(() {
           _items = data
-              .map((e) => BriefItem.fromJson(e as Map<String, dynamic>))
+              .map((e) => BriefItem.fromJson(e as Map<String, dynamic>, lang: _lang))
               .toList();
           _quotaReached = quotaReached;
           _nextCursor = nextCursor;

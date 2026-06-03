@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/brief_item.dart';
-import '../screens/article_browser_screen.dart';
+import '../screens/threat_detail_screen.dart';
 import '../theme/terminal_theme.dart';
 import 'terminal_widgets.dart';
 
@@ -57,10 +57,8 @@ class BriefCard extends StatelessWidget {
           : () => Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => ArticleBrowserScreen(
-                    url: brief.sourceUrl,
-                    title: brief.headline,
-                  ),
+                  builder: (_) => const ThreatDetailScreen(),
+                  settings: RouteSettings(arguments: brief),
                 ),
               ),
       child: Container(

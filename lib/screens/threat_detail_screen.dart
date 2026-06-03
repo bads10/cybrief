@@ -2,17 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../models/brief_item.dart';
 import 'article_browser_screen.dart';
-import 'threat_feed_screen.dart';
 
 class ThreatDetailScreen extends StatelessWidget {
   const ThreatDetailScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final article = ModalRoute.of(context)?.settings.arguments as Article?;
+    final brief = ModalRoute.of(context)?.settings.arguments as BriefItem?;
 
-    if (article == null) {
+    if (brief == null) {
       return Scaffold(
         backgroundColor: const Color(0xFF0F172A),
         appBar: AppBar(
@@ -37,53 +37,73 @@ class ThreatDetailScreen extends StatelessWidget {
       );
     }
 
+    // Criticality label + color
     Color severityColor;
-    switch (article.criticality) {
-      case 'Critique':
-      case 'Critical':
+    String critLabel;
+    switch (brief.severity) {
+      case Severity.critical:
         severityColor = Colors.redAccent;
+        critLabel = 'CRITIQUE';
         break;
-      case 'Élevé':
-      case 'High':
+      case Severity.high:
         severityColor = Colors.orangeAccent;
+        critLabel = 'ÉLEVÉ';
         break;
-      case 'Moyen':
-      case 'Medium':
+      case Severity.medium:
         severityColor = Colors.yellowAccent;
+        critLabel = 'MOYEN';
         break;
-      default:
+      case Severity.low:
         severityColor = Colors.blueAccent;
+        critLabel = 'FAIBLE';
+        break;
     }
 
-    final tags = article.tags
+    // Time ago
+    final now = DateTime.now();
+    final diff = now.difference(brief.publishedAt);
+    String timeAgo;
+    if (diff.inMinutes < 1) {
+      timeAgo = 'maintenant';
+    } else if (diff.inMinutes < 60) {
+      timeAgo = 'il y a ${diff.inMinutes} min';
+    } else if (diff.inHours < 24) {
+      timeAgo = 'il y a ${diff.inHours}h';
+    } else if (diff.inDays == 1) {
+      timeAgo = 'hier';
+    } else if (diff.inDays < 7) {
+      timeAgo = 'il y a ${diff.inDays} jours';
+    } else {
+      final d = brief.publishedAt;
+      timeAgo = '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+    }
+
+    // Tags from mitreTag
+    final tags = (brief.mitreTag ?? '')
         .split(',')
         .map((t) => t.trim())
         .where((t) => t.isNotEmpty)
         .toList();
 
-    final cves = article.cve
+    // CVEs from cveTag
+    final cves = (brief.cveTag ?? '')
         .split(',')
         .map((c) => c.trim())
         .where((c) => c.isNotEmpty)
         .toList();
 
-    final affected = article.affectedSystems
+    // Affected systems from action field
+    final affected = brief.action
         .split(',')
         .map((s) => s.trim())
-        .where((s) => s.isNotEmpty)
+        .where((s) => s.isNotEmpty &&
+            s != 'Suivre les recommandations du CERT-FR.')
         .toList();
 
-    final iocList = article.iocs
-        .split('|')
-        .map((i) => i.trim())
-        .where((i) => i.isNotEmpty)
-        .toList();
-
-    // Y a-t-il des infos techniques à afficher ?
     final hasTechInfo = cves.isNotEmpty ||
-        article.attackType.isNotEmpty ||
+        (brief.whyMatters.isNotEmpty &&
+            brief.whyMatters != 'Analyse en cours par nos experts.') ||
         affected.isNotEmpty;
-    final hasIocs = iocList.isNotEmpty;
 
     return Scaffold(
       backgroundColor: const Color(0xFF0F172A),
@@ -113,11 +133,23 @@ class ThreatDetailScreen extends StatelessWidget {
           ),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(LucideIcons.bookmark, size: 20, color: Colors.white54),
-            onPressed: () {},
+          GestureDetector(
+            onTap: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Favoris bientôt disponible',
+                      style: GoogleFonts.inter(fontSize: 13)),
+                  backgroundColor: const Color(0xFF1E293B),
+                  duration: const Duration(seconds: 2),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            },
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 12),
+              child: Icon(LucideIcons.bookmark, size: 20, color: Colors.white54),
+            ),
           ),
-          const SizedBox(width: 8),
         ],
       ),
 
@@ -144,7 +176,7 @@ class ThreatDetailScreen extends StatelessWidget {
                       Icon(Icons.circle, size: 7, color: severityColor),
                       const SizedBox(width: 6),
                       Text(
-                        article.criticality.toUpperCase(),
+                        critLabel,
                         style: TextStyle(
                           color: severityColor,
                           fontSize: 11,
@@ -160,7 +192,7 @@ class ThreatDetailScreen extends StatelessWidget {
                     style: TextStyle(color: Colors.white.withValues(alpha: 0.25))),
                 const SizedBox(width: 10),
                 Text(
-                  article.timeAgo,
+                  timeAgo,
                   style: GoogleFonts.inter(
                       color: Colors.white.withValues(alpha: 0.4), fontSize: 12),
                 ),
@@ -171,7 +203,7 @@ class ThreatDetailScreen extends StatelessWidget {
 
             // ── Titre ─────────────────────────────────────────
             Text(
-              article.title,
+              brief.headline,
               style: GoogleFonts.inter(
                 fontSize: 23,
                 fontWeight: FontWeight.bold,
@@ -181,7 +213,7 @@ class ThreatDetailScreen extends StatelessWidget {
               ),
             ),
 
-            // ── Tags ──────────────────────────────────────────
+            // ── Tags MITRE ────────────────────────────────────
             if (tags.isNotEmpty) ...[
               const SizedBox(height: 12),
               Wrap(
@@ -212,15 +244,30 @@ class ThreatDetailScreen extends StatelessWidget {
             _SectionLabel('RÉSUMÉ', LucideIcons.fileText),
             const SizedBox(height: 10),
             Text(
-              article.summary.isNotEmpty
-                  ? article.summary
-                  : 'Aucun résumé disponible.',
+              brief.body.isNotEmpty ? brief.body : 'Aucun résumé disponible.',
               style: GoogleFonts.inter(
                 fontSize: 15,
                 color: Colors.white.withValues(alpha: 0.85),
                 height: 1.65,
               ),
             ),
+
+            // ── Pourquoi c'est important ───────────────────────
+            if (brief.whyMatters.isNotEmpty &&
+                brief.whyMatters != 'Analyse en cours par nos experts.') ...[
+              const SizedBox(height: 24),
+              _Divider(),
+              _SectionLabel('POURQUOI C\'EST IMPORTANT', LucideIcons.shieldAlert),
+              const SizedBox(height: 10),
+              Text(
+                brief.whyMatters,
+                style: GoogleFonts.inter(
+                  fontSize: 15,
+                  color: Colors.white.withValues(alpha: 0.85),
+                  height: 1.65,
+                ),
+              ),
+            ],
 
             // ── Informations techniques ────────────────────────
             if (hasTechInfo) ...[
@@ -237,11 +284,12 @@ class ThreatDetailScreen extends StatelessWidget {
                 ),
                 child: Column(
                   children: [
-                    if (article.attackType.isNotEmpty)
+                    if (brief.whyMatters.isNotEmpty &&
+                        brief.whyMatters != 'Analyse en cours par nos experts.')
                       _TechRow(
                         icon: LucideIcons.zap,
                         label: 'Type d\'attaque',
-                        value: article.attackType,
+                        value: brief.whyMatters,
                         iconColor: Colors.orangeAccent,
                         isFirst: true,
                         isLast: cves.isEmpty && affected.isEmpty,
@@ -252,7 +300,8 @@ class ThreatDetailScreen extends StatelessWidget {
                         label: 'CVE',
                         value: cves.join('  •  '),
                         iconColor: Colors.redAccent,
-                        isFirst: article.attackType.isEmpty,
+                        isFirst: brief.whyMatters.isEmpty ||
+                            brief.whyMatters == 'Analyse en cours par nos experts.',
                         isLast: affected.isEmpty,
                         monospace: true,
                         copiable: true,
@@ -263,21 +312,14 @@ class ThreatDetailScreen extends StatelessWidget {
                         label: 'Systèmes affectés',
                         value: affected.join(', '),
                         iconColor: const Color(0xFF38BDF8),
-                        isFirst: article.attackType.isEmpty && cves.isEmpty,
+                        isFirst: (brief.whyMatters.isEmpty ||
+                                brief.whyMatters == 'Analyse en cours par nos experts.') &&
+                            cves.isEmpty,
                         isLast: true,
                       ),
                   ],
                 ),
               ),
-            ],
-
-            // ── Indicateurs de compromission ───────────────────
-            if (hasIocs) ...[
-              const SizedBox(height: 24),
-              _Divider(),
-              _SectionLabel('INDICATEURS DE COMPROMISSION', LucideIcons.octagonAlert),
-              const SizedBox(height: 12),
-              ...iocList.map((ioc) => _IocCard(ioc: ioc)),
             ],
 
             const SizedBox(height: 16),
@@ -286,8 +328,9 @@ class ThreatDetailScreen extends StatelessWidget {
       ),
 
       // ── Bouton fixe en bas ────────────────────────────────────
-      bottomNavigationBar: article.url.isNotEmpty
-          ? _StickyBrowserBar(article: article)
+      bottomNavigationBar: brief.sourceUrl.isNotEmpty &&
+              brief.sourceUrl != 'https://cybrief.app'
+          ? _StickyBrowserBar(url: brief.sourceUrl, title: brief.headline)
           : const SizedBox.shrink(),
     );
   }
@@ -430,113 +473,10 @@ class _TechRow extends StatelessWidget {
   }
 }
 
-class _IocCard extends StatelessWidget {
-  final String ioc;
-  const _IocCard({required this.ioc});
-
-  @override
-  Widget build(BuildContext context) {
-    // Parse "Type:valeur" ou juste "valeur"
-    final colonIdx = ioc.indexOf(':');
-    final hasLabel = colonIdx > 0 && colonIdx < 20;
-    final label = hasLabel ? ioc.substring(0, colonIdx).trim() : 'IOC';
-    final value = hasLabel ? ioc.substring(colonIdx + 1).trim() : ioc;
-
-    Color labelColor;
-    IconData labelIcon;
-    switch (label.toLowerCase()) {
-      case 'hash':
-      case 'sha256':
-      case 'md5':
-        labelColor = const Color(0xFFFBBF24);
-        labelIcon = LucideIcons.hash;
-        break;
-      case 'ip':
-        labelColor = Colors.redAccent;
-        labelIcon = LucideIcons.globe;
-        break;
-      case 'domaine':
-      case 'domain':
-        labelColor = Colors.orangeAccent;
-        labelIcon = LucideIcons.link;
-        break;
-      case 'url':
-        labelColor = const Color(0xFF38BDF8);
-        labelIcon = LucideIcons.externalLink;
-        break;
-      default:
-        labelColor = Colors.white54;
-        labelIcon = LucideIcons.shieldAlert;
-    }
-
-    return GestureDetector(
-      onLongPress: () {
-        Clipboard.setData(ClipboardData(text: value));
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Copié : ${value.length > 40 ? '${value.substring(0, 40)}…' : value}',
-                style: GoogleFonts.inter(fontSize: 13)),
-            backgroundColor: const Color(0xFF1E293B),
-            duration: const Duration(seconds: 2),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1E293B),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: labelColor.withValues(alpha: 0.2)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                color: labelColor.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Icon(labelIcon, size: 13, color: labelColor),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(label.toUpperCase(),
-                      style: GoogleFonts.inter(
-                          fontSize: 9,
-                          color: labelColor.withValues(alpha: 0.7),
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.8)),
-                  const SizedBox(height: 2),
-                  Text(
-                    value,
-                    style: GoogleFonts.jetBrainsMono(
-                        fontSize: 12,
-                        color: Colors.white.withValues(alpha: 0.75)),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-            Icon(LucideIcons.copy,
-                size: 13, color: Colors.white.withValues(alpha: 0.2)),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Barre fixe en bas — toujours visible
 class _StickyBrowserBar extends StatelessWidget {
-  final Article article;
-  const _StickyBrowserBar({required this.article});
+  final String url;
+  final String title;
+  const _StickyBrowserBar({required this.url, required this.title});
 
   @override
   Widget build(BuildContext context) {
@@ -552,8 +492,7 @@ class _StickyBrowserBar extends StatelessWidget {
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) =>
-                ArticleBrowserScreen(url: article.url, title: article.title),
+            builder: (_) => ArticleBrowserScreen(url: url, title: title),
           ),
         ),
         child: Container(

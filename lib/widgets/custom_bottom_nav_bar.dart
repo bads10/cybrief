@@ -1,86 +1,79 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../theme/terminal_theme.dart';
 
 class CustomBottomNavBar extends StatelessWidget {
   final int currentIndex;
 
-  const CustomBottomNavBar({
-    super.key,
-    required this.currentIndex,
-  });
+  const CustomBottomNavBar({super.key, required this.currentIndex});
+
+  static const _routes = ['/flux', '/categories', '/stats', '/profile'];
+  static const _labels = ['FLUX', 'INTEL', 'STATS', 'PARAM'];
+  static const _icons  = [
+    Icons.feed_outlined,
+    Icons.shield_outlined,
+    Icons.bar_chart_outlined,
+    Icons.settings_outlined,
+  ];
 
   @override
   Widget build(BuildContext context) {
+    final bottom = MediaQuery.of(context).padding.bottom;
     return Container(
-      decoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(
-            color: Colors.white.withValues(alpha: 0.05),
-            width: 1,
-          ),
-        ),
+      decoration: const BoxDecoration(
+        color: TT.bg,
+        border: Border(top: BorderSide(color: TT.line, width: 1)),
       ),
-      child: BottomNavigationBar(
-        backgroundColor: const Color(0xFF0F172A),
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: const Color(0xFF38BDF8),
-        unselectedItemColor: Colors.white.withValues(alpha: 0.4),
-        currentIndex: currentIndex,
-        selectedLabelStyle: GoogleFonts.inter(
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 1.2,
-        ),
-        unselectedLabelStyle: GoogleFonts.inter(
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 1.2,
-        ),
-        onTap: (index) {
-          if (index == currentIndex) return;
-
-          const routes = ['/feed', '/categories', '/stats', '/profile'];
-          final target = routes[index];
-
-          // Garde /feed comme base de pile — les onglets s'empilent dessus
-          // Retour sur n'importe quel onglet ramène toujours à /feed
-          Navigator.pushNamedAndRemoveUntil(
-            context,
-            target,
-            (route) => route.settings.name == '/feed',
+      padding: EdgeInsets.only(bottom: bottom > 0 ? bottom : 6),
+      child: Row(
+        children: List.generate(4, (i) {
+          final active = i == currentIndex;
+          return Expanded(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {
+                if (i == currentIndex) return;
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  _routes[i],
+                  (route) => route.settings.name == '/flux',
+                );
+              },
+              child: Container(
+                decoration: BoxDecoration(
+                  border: Border(
+                    top: BorderSide(
+                      color: active ? TT.accent : Colors.transparent,
+                      width: 1,
+                    ),
+                  ),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      _icons[i],
+                      size: 16,
+                      color: active ? TT.accent : TT.muted,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _labels[i],
+                      style: TextStyle(
+                        fontFamily: 'JetBrains Mono',
+                        fontSize: 9,
+                        letterSpacing: 1,
+                        color: active ? TT.accent : TT.muted,
+                        fontWeight:
+                            active ? FontWeight.w700 : FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           );
-        },
-        items: const [
-          BottomNavigationBarItem(
-            icon: Padding(
-              padding: EdgeInsets.only(bottom: 4),
-              child: Icon(LucideIcons.rss, size: 20),
-            ),
-            label: 'FLUX',
-          ),
-          BottomNavigationBarItem(
-            icon: Padding(
-              padding: EdgeInsets.only(bottom: 4),
-              child: Icon(LucideIcons.shield, size: 20),
-            ),
-            label: 'INTEL',
-          ),
-          BottomNavigationBarItem(
-            icon: Padding(
-              padding: EdgeInsets.only(bottom: 4),
-              child: Icon(LucideIcons.chartBarBig, size: 20),
-            ),
-            label: 'STATS',
-          ),
-          BottomNavigationBarItem(
-            icon: Padding(
-              padding: EdgeInsets.only(bottom: 4),
-              child: Icon(LucideIcons.settings, size: 20),
-            ),
-            label: 'PARAMÈTRES',
-          ),
-        ],
+        }),
       ),
     );
   }

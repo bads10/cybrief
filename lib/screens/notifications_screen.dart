@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/custom_bottom_nav_bar.dart';
+import '../widgets/terminal_widgets.dart';
+import '../theme/terminal_theme.dart';
+import '../services/user_service.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -12,203 +14,271 @@ class NotificationsScreen extends StatefulWidget {
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
   bool _criticalAlerts = true;
-  bool _newThreats = true;
-  bool _dailySummary = false;
-  String _emailFrequency = 'Temps Réel';
+  bool _highAlerts     = true;
+  bool _medAlerts      = false;
+  bool _alwaysCrit     = true;
+  bool _dailyDigest    = true;
+  bool _newsletterSub  = false;
+  String _newsletterFreq = 'daily';
+
+  bool _loading = true;
+  bool _saving  = false;
+  String _saveStatus = ''; // '' | 'SAVING…' | '✓ ENREGISTRÉ'
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPrefs();
+  }
+
+  Future<void> _loadPrefs() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) { setState(() => _loading = false); return; }
+
+    try {
+      final user = await UserService.getUser(uid);
+      if (!mounted || user == null) { setState(() => _loading = false); return; }
+      setState(() {
+        _criticalAlerts  = user['notifCritical']        ?? true;
+        _highAlerts      = user['notifHigh']             ?? true;
+        _medAlerts       = user['notifMedium']           ?? false;
+        _dailyDigest     = user['notifDigest']           ?? true;
+        _newsletterSub   = user['newsletterSubscribed']  ?? false;
+        _newsletterFreq  = user['newsletterFrequency']   ?? 'daily';
+        _loading         = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _save(Map<String, dynamic> patch) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    if (mounted) setState(() { _saving = true; _saveStatus = 'ENREG…'; });
+    try {
+      await UserService.updateUser(uid, patch);
+      if (mounted) {
+        setState(() { _saving = false; _saveStatus = '✓ ENREGISTRÉ'; });
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) setState(() => _saveStatus = '');
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() { _saving = false; _saveStatus = ''; });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(LucideIcons.chevronLeft, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          'Préférences de Notifications',
-          style: GoogleFonts.inter(
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-            color: Colors.white,
+      backgroundColor: TT.bg,
+      body: Column(
+        children: [
+          SizedBox(height: MediaQuery.of(context).padding.top),
+          TerminalTopBar(
+            label: '< NOTIFICATIONS',
+            right: _saveStatus,
           ),
-        ),
-        centerTitle: false,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildSectionTitle('Notifications Push'),
-            const SizedBox(height: 24),
-            _buildNotificationToggle(
-              'Alertes Critiques',
-              'Alertes immédiates pour les vulnérabilités Zero-Day et incidents majeurs.',
-              _criticalAlerts,
-              (val) => setState(() => _criticalAlerts = val),
-            ),
-            const SizedBox(height: 32),
-            _buildNotificationToggle(
-              'Nouvelles Menaces',
-              'Soyez informé des nouvelles campagnes de phishing et malwares identifiés.',
-              _newThreats,
-              (val) => setState(() => _newThreats = val),
-            ),
-            const SizedBox(height: 32),
-            _buildNotificationToggle(
-              'Résumé Quotidien',
-              'Un condensé des actualités de cybersécurité chaque matin à 8h00.',
-              _dailySummary,
-              (val) => setState(() => _dailySummary = val),
-            ),
-            const SizedBox(height: 48),
-            _buildSectionTitle('Alertes Email'),
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Fréquence des rapports',
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+          if (_loading)
+            const Expanded(
+              child: Center(
+                child: SizedBox(
+                  width: 16, height: 16,
+                  child: CircularProgressIndicator(color: TT.accent, strokeWidth: 1.5),
                 ),
-                Text(
-                  'PARAMÉTRÉ',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF38BDF8),
-                    letterSpacing: 1.0,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(12),
               ),
-              child: Row(
-                children: [
-                  _buildFrequencyChip('Temps Réel'),
-                  _buildFrequencyChip('Quotidien'),
-                  _buildFrequencyChip('Hebdo'),
-                ],
-              ),
-            ),
-            const SizedBox(height: 32),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF38BDF8).withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFF38BDF8).withValues(alpha: 0.1)),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(LucideIcons.info, size: 20, color: Color(0xFF38BDF8)),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      '\"L\'abonnement aux alertes en temps réel garantit une réactivité maximale face aux vulnérabilités critiques.\"',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontStyle: FontStyle.italic,
-                        color: Colors.white.withValues(alpha: 0.7),
-                        height: 1.5,
+            )
+          else
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _section('// PUSH · PAR CRITICITÉ'),
+                    ...[
+                      (
+                        level: 'CRIT', label: 'Critiques',
+                        desc: 'Zero-day, RCE, breach majeur',
+                        on: _criticalAlerts, color: TT.red,
+                        onChanged: (v) {
+                          setState(() => _criticalAlerts = v);
+                          _save({'notifCritical': v});
+                        }
                       ),
+                      (
+                        level: 'HIGH', label: 'Élevées',
+                        desc: 'CVE actively exploited',
+                        on: _highAlerts, color: TT.orange,
+                        onChanged: (v) {
+                          setState(() => _highAlerts = v);
+                          _save({'notifHigh': v});
+                        }
+                      ),
+                      (
+                        level: 'MED', label: 'Moyennes',
+                        desc: 'Advisories, malwares',
+                        on: _medAlerts, color: TT.yellow,
+                        onChanged: (v) {
+                          setState(() => _medAlerts = v);
+                          _save({'notifMedium': v});
+                        }
+                      ),
+                    ].map(_buildPushRow),
+
+                    _section('// SILENCE'),
+                    _buildNavRow('Heures silence', '22:00 — 07:00'),
+                    _buildToggleRow(
+                      'Toujours pour CRIT', _alwaysCrit,
+                      (v) => setState(() => _alwaysCrit = v),
                     ),
-                  ),
-                ],
+
+                    _section('// DIGEST QUOTIDIEN'),
+                    _buildToggleRow(
+                      'Brief du jour — 18h30', _dailyDigest,
+                      (v) {
+                        setState(() => _dailyDigest = v);
+                        _save({'notifDigest': v});
+                      },
+                      subtitle: 'Top 5 menaces des dernières 24h',
+                    ),
+
+                    _section('// NEWSLETTER'),
+                    _buildToggleRow(
+                      'Abonnement email', _newsletterSub,
+                      (v) {
+                        setState(() => _newsletterSub = v);
+                        _save({'newsletterSubscribed': v});
+                      },
+                      subtitle: _newsletterSub ? 'Actif · $_newsletterFreq' : 'Désactivé',
+                    ),
+                    if (_newsletterSub) ...[
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                        child: Container(
+                          decoration: BoxDecoration(border: Border.all(color: TT.line, width: 1)),
+                          child: Row(
+                            children: [
+                              ('daily', 'QUOTIDIEN'),
+                              ('weekly', 'HEBDO'),
+                            ].asMap().entries.map((e) {
+                              final selected = e.value.$1 == _newsletterFreq;
+                              return Expanded(
+                                child: GestureDetector(
+                                  onTap: () {
+                                    setState(() => _newsletterFreq = e.value.$1);
+                                    _save({'newsletterFrequency': e.value.$1});
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(vertical: 10),
+                                    decoration: BoxDecoration(
+                                      color: selected ? TT.accent : Colors.transparent,
+                                      border: Border(
+                                        right: e.key == 0
+                                            ? const BorderSide(color: TT.line, width: 1)
+                                            : BorderSide.none,
+                                      ),
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        e.value.$2,
+                                        style: TT.mono(
+                                          size: 10,
+                                          weight: FontWeight.w700,
+                                          color: selected ? TT.bg : TT.muted,
+                                          letterSpacing: 1,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ),
+                    ],
+
+                    const SizedBox(height: 32),
+                  ],
+                ),
               ),
             ),
-          ],
-        ),
+        ],
       ),
       bottomNavigationBar: const CustomBottomNavBar(currentIndex: 3),
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: GoogleFonts.inter(
-        fontSize: 24,
-        fontWeight: FontWeight.bold,
-        color: Colors.white,
-        letterSpacing: -0.5,
+  Widget _section(String label) => Padding(
+        padding: const EdgeInsets.fromLTRB(12, 16, 12, 4),
+        child: Text(label, style: TT.mono(size: 10, color: TT.muted, letterSpacing: 1.5)),
+      );
+
+  Widget _buildPushRow(
+    ({String level, String label, String desc, bool on, Color color, ValueChanged<bool> onChanged}) r,
+  ) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+      decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: TT.line, width: 1))),
+      child: Row(
+        children: [
+          TerminalSevTag(level: r.level),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(r.label, style: TT.sans(size: 13, weight: FontWeight.w600, color: TT.text)),
+                const SizedBox(height: 2),
+                Text(r.desc, style: TT.mono(size: 10, color: TT.muted)),
+              ],
+            ),
+          ),
+          TerminalToggle(value: r.on, onChanged: r.onChanged),
+        ],
       ),
     );
   }
 
-  Widget _buildNotificationToggle(String title, String subtitle, bool value, Function(bool) onChanged) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  color: Colors.white.withValues(alpha: 0.5),
-                  height: 1.4,
-                ),
-              ),
-            ],
+  Widget _buildToggleRow(String label, bool value, ValueChanged<bool> onChanged, {String? subtitle}) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+      decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: TT.line, width: 1))),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: TT.sans(size: 13, color: TT.text)),
+                if (subtitle != null) ...[
+                  const SizedBox(height: 2),
+                  Text(subtitle, style: TT.mono(size: 10, color: TT.muted)),
+                ],
+              ],
+            ),
           ),
-        ),
-        const SizedBox(width: 16),
-        Switch(
-          value: value,
-          onChanged: onChanged,
-          activeColor: const Color(0xFF38BDF8),
-        ),
-      ],
+          TerminalToggle(value: value, onChanged: onChanged),
+        ],
+      ),
     );
   }
 
-  Widget _buildFrequencyChip(String label) {
-    bool isSelected = _emailFrequency == label;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => setState(() => _emailFrequency = label),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: isSelected ? Colors.white.withValues(alpha: 0.1) : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-              color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.5),
-            ),
-          ),
-        ),
+  Widget _buildNavRow(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+      decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: TT.line, width: 1))),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: TT.sans(size: 13, color: TT.text)),
+          Row(children: [
+            Text(value, style: TT.mono(size: 11, color: TT.muted)),
+            const SizedBox(width: 6),
+            Text('›', style: TT.mono(size: 14, color: TT.muted)),
+          ]),
+        ],
       ),
     );
   }

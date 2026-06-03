@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/custom_bottom_nav_bar.dart';
+import '../widgets/terminal_widgets.dart';
+import '../theme/terminal_theme.dart';
 import '../services/user_service.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -16,7 +16,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _notifCritique = true;
   bool _notifEleve    = true;
   bool _notifMoyen    = false;
-  bool _darkMode      = true;
   String _newsletterFreq = 'off';
   String _currentLang = 'fr';
 
@@ -56,72 +55,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() => _currentLang = newLang);
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid != null) UserService.updateUser(uid, {'language': newLang});
-    // Changer la locale de l'app
-    // CybriefApp.of(context)?.setLocale(Locale(newLang));
   }
 
-  void _showNewsletterSheet() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (_) => Container(
-        decoration: const BoxDecoration(
-          color: Color(0xFF0F172A),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(2),
-            ))),
-            const SizedBox(height: 24),
-            Text('Newsletter', style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
-            const SizedBox(height: 20),
-            for (final freq in ['daily', 'weekly', 'off'])
-              _buildFreqOption(freq),
-          ],
-        ),
-      ),
-    );
+  Future<void> _logout() async {
+    await FirebaseAuth.instance.signOut();
+    if (!mounted) return;
+    Navigator.pushReplacementNamed(context, '/');
   }
 
-  Widget _buildFreqOption(String freq) {
-    final labels = {'daily': 'Quotidien (18h30)', 'weekly': 'Hebdomadaire (lundi)', 'off': 'Désactivé'};
-    final isSelected = _newsletterFreq == freq;
-    return GestureDetector(
-      onTap: () async {
-        setState(() => _newsletterFreq = freq);
-        Navigator.pop(context);
-        final uid = FirebaseAuth.instance.currentUser?.uid;
-        if (uid == null) return;
-        if (freq == 'off') {
-          await UserService.unsubscribeNewsletter(uid);
-        } else {
-          await UserService.subscribeNewsletter(uid, frequency: freq, language: _currentLang);
-        }
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF38BDF8).withValues(alpha: 0.1) : Colors.white.withValues(alpha: 0.03),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: isSelected ? const Color(0xFF38BDF8) : Colors.white.withValues(alpha: 0.07)),
-        ),
-        child: Row(
-          children: [
-            Expanded(child: Text(labels[freq]!, style: GoogleFonts.inter(fontSize: 15, color: Colors.white, fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal))),
-            if (isSelected) const Icon(Icons.check_circle_rounded, color: Color(0xFF38BDF8), size: 20),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ── Données utilisateur depuis Firebase Auth ─────────────────────────────
   String get _displayName {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return 'Visiteur';
@@ -136,183 +77,96 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   bool get _isLoggedIn => FirebaseAuth.instance.currentUser != null;
 
+  String get _initials {
+    final n = _displayName;
+    final parts = n.split(' ');
+    if (parts.length >= 2) return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    return n.isNotEmpty ? n[0].toUpperCase() : '?';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        automaticallyImplyLeading: false,
-        title: Text('PARAMÈTRES', style: GoogleFonts.inter(
-          fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white, letterSpacing: 1.5,
-        )),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── Profil utilisateur ──────────────────────────────
-            _buildProfileCard(),
-            const SizedBox(height: 20),
-
-            // ── Premium ─────────────────────────────────────────
-            _buildPremiumBanner(),
-            const SizedBox(height: 28),
-
-            // ── Compte ──────────────────────────────────────────
-            _buildSectionHeader('COMPTE'),
-            _buildCard([
-              if (_isLoggedIn) ...[
-                _buildNavRow(LucideIcons.user, 'Modifier le profil', null, onTap: _showEditProfile),
-                _buildDivider(),
-                _buildNavRow(LucideIcons.mail, 'E-mail', _displayEmail),
-                _buildDivider(),
-                _buildNavRow(LucideIcons.keyRound, 'Changer le mot de passe', null, onTap: _showChangePassword),
-              ] else
-                _buildNavRow(LucideIcons.logIn, 'Connexion / Inscription', null,
-                    onTap: () => Navigator.pushNamed(context, '/login')),
-            ]),
-            const SizedBox(height: 24),
-
-            // ── Notifications ────────────────────────────────────
-            _buildSectionHeader('NOTIFICATIONS'),
-            _buildCard([
-              _buildToggle(LucideIcons.octagonAlert, 'Alertes CRITIQUES', _notifCritique,
-                  const Color(0xFFEF4444), (v) => _updateNotif('critical', v)),
-              _buildDivider(),
-              _buildToggle(LucideIcons.triangleAlert, 'Alertes ÉLEVÉES', _notifEleve,
-                  const Color(0xFFF97316), (v) => _updateNotif('high', v)),
-              _buildDivider(),
-              _buildToggle(LucideIcons.bell, 'Alertes MOYENNES', _notifMoyen,
-                  const Color(0xFFFBBF24), (v) => _updateNotif('medium', v)),
-            ]),
-            const SizedBox(height: 24),
-
-            // ── Affichage ────────────────────────────────────────
-            _buildSectionHeader('AFFICHAGE'),
-            _buildCard([
-              _buildToggle(LucideIcons.moon, 'Mode sombre', _darkMode,
-                  const Color(0xFF38BDF8), (v) => setState(() => _darkMode = v)),
-            ]),
-            const SizedBox(height: 24),
-
-            // ── Newsletter ───────────────────────────────────────
-            if (_isLoggedIn) ...[
-              _buildSectionHeader('NEWSLETTER'),
-              _buildCard([
-                _buildNavRow(
-                  LucideIcons.mail,
-                  'Fréquence',
-                  _newsletterFreqLabel(),
-                  onTap: _showNewsletterSheet,
-                ),
-              ]),
-              const SizedBox(height: 24),
-            ],
-
-            // ── Langue ───────────────────────────────────────────
-            _buildSectionHeader('LANGUE / LANGUAGE'),
-            _buildCard([
-              _buildNavRow(
-                LucideIcons.globe,
-                'Langue de l\'app',
-                _currentLang == 'en' ? '🇬🇧 English' : '🇫🇷 Français',
-                onTap: _toggleLanguage,
+      backgroundColor: TT.bg,
+      body: Column(
+        children: [
+          SizedBox(height: MediaQuery.of(context).padding.top),
+          const TerminalTopBar(label: 'PARAMÈTRES', right: ''),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildUserCard(),
+                  if (!_isLoggedIn) _buildLoginCta(),
+                  _buildPremiumBanner(),
+                  _buildSection(),
+                  const SizedBox(height: 32),
+                ],
               ),
-            ]),
-            const SizedBox(height: 24),
-
-            // ── Flux RSS ─────────────────────────────────────────
-            _buildSectionHeader('FLUX RSS'),
-            _buildCard([
-              _buildNavRow(LucideIcons.rss, 'Sources actives', '29 sources',
-                  onTap: () => Navigator.pushNamed(context, '/categories')),
-            ]),
-            const SizedBox(height: 24),
-
-            // ── À propos ─────────────────────────────────────────
-            _buildSectionHeader('À PROPOS'),
-            _buildCard([
-              _buildInfoRow(LucideIcons.info, 'Version', '1.0.0'),
-            ]),
-            const SizedBox(height: 32),
-
-            // ── Bouton déconnexion / connexion ───────────────────
-            if (_isLoggedIn)
-              _buildLogoutButton()
-            else
-              _buildLoginButton(),
-            const SizedBox(height: 16),
-          ],
-        ),
+            ),
+          ),
+        ],
       ),
       bottomNavigationBar: const CustomBottomNavBar(currentIndex: 3),
     );
   }
 
-  // ── Widgets ────────────────────────────────────────────────────
-
-  Widget _buildProfileCard() {
+  Widget _buildUserCard() {
     return Container(
-      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.fromLTRB(12, 14, 12, 0),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.03),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
+        border: Border.all(color: TT.line, width: 1),
+        color: TT.surface,
       ),
       child: Row(
         children: [
-          Stack(
-            children: [
-              Container(
-                width: 64, height: 64,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF135BEC).withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFF38BDF8).withValues(alpha: 0.4), width: 2),
-                ),
-                child: const Icon(LucideIcons.user, size: 30, color: Color(0xFF38BDF8)),
-              ),
-              Positioned(
-                bottom: 0, right: 0,
-                child: Container(
-                  width: 20, height: 20,
-                  decoration: BoxDecoration(
-                    color: _isLoggedIn ? const Color(0xFF22C55E) : Colors.grey,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: const Color(0xFF0F172A), width: 2),
-                  ),
-                ),
-              ),
-            ],
+          Container(
+            width: 48, height: 48,
+            decoration: BoxDecoration(
+              color: TT.accent.withOpacity(0.15),
+              border: Border.all(color: TT.accent.withOpacity(0.5), width: 1),
+            ),
+            child: Center(
+              child: Text(_initials,
+                  style: TT.sans(
+                      size: 18, weight: FontWeight.w800, color: TT.accent)),
+            ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(_displayName, style: GoogleFonts.inter(
-                  fontSize: 17, fontWeight: FontWeight.bold, color: Colors.white,
-                )),
+                Text(_displayName,
+                    style: TT.sans(
+                        size: 15, weight: FontWeight.w700, color: TT.text)),
                 const SizedBox(height: 2),
-                Text(_displayEmail, style: GoogleFonts.inter(
-                  fontSize: 13, color: Colors.white.withValues(alpha: 0.5),
-                )),
+                Text(_displayEmail,
+                    style: TT.mono(size: 10, color: TT.muted)),
+                const SizedBox(height: 6),
+                Row(children: [
+                  _badge('FREE', TT.muted),
+                  const SizedBox(width: 6),
+                  _badge('STREAK 0d', TT.line),
+                ]),
               ],
             ),
           ),
           if (_isLoggedIn)
             GestureDetector(
               onTap: _showEditProfile,
+              behavior: HitTestBehavior.opaque,
               child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.06),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(LucideIcons.pencil, size: 16, color: Colors.white.withValues(alpha: 0.6)),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                child: Text('EDIT',
+                    style: TT.mono(
+                      size: 10,
+                      weight: FontWeight.w700,
+                      color: TT.accent,
+                      letterSpacing: 1,
+                    )),
               ),
             ),
         ],
@@ -320,50 +174,75 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  Widget _badge(String label, Color borderColor) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+      decoration: BoxDecoration(
+        border: Border.all(color: borderColor, width: 1),
+      ),
+      child: Text(label,
+          style: TT.mono(size: 9, color: TT.muted, letterSpacing: 0.5)),
+    );
+  }
+
+  Widget _buildLoginCta() {
+    return GestureDetector(
+      onTap: () => Navigator.pushNamed(context, '/login'),
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+        padding: const EdgeInsets.symmetric(vertical: 11),
+        color: TT.text,
+        child: Center(
+          child: Text('SE CONNECTER',
+              style: TT.mono(
+                  size: 11,
+                  weight: FontWeight.w700,
+                  color: TT.bg,
+                  letterSpacing: 1)),
+        ),
+      ),
+    );
+  }
+
   Widget _buildPremiumBanner() {
     return GestureDetector(
-      onTap: () => _showPremiumSheet(),
+      onTap: () => Navigator.pushNamed(context, '/subscribe'),
       child: Container(
-        padding: const EdgeInsets.all(20),
+        margin: const EdgeInsets.fromLTRB(12, 14, 12, 0),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF7C3AED), Color(0xFF135BEC)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF7C3AED).withValues(alpha: 0.3),
-              blurRadius: 20, offset: const Offset(0, 8),
-            ),
-          ],
+          border: Border.all(color: TT.accent, width: 1),
+          color: TT.accent.withOpacity(0.06),
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(LucideIcons.crown, color: Colors.amber, size: 28),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Passer à PREMIUM', style: GoogleFonts.inter(
-                    fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white,
-                  )),
-                  Text('Accès illimité · Alertes temps réel · CVE exclusifs',
-                    style: GoogleFonts.inter(fontSize: 12, color: Colors.white.withValues(alpha: 0.75))),
-                ],
-              ),
-            ),
+            Text('// CYBRIEF / PRO',
+                style: TT.mono(
+                    size: 10,
+                    weight: FontWeight.w700,
+                    color: TT.accent,
+                    letterSpacing: 1.5)),
+            const SizedBox(height: 6),
+            Text('Accès illimité · 6.67€/mois',
+                style: TT.sans(
+                    size: 18, weight: FontWeight.w700, color: TT.text)),
+            const SizedBox(height: 4),
+            Text('Alertes temps réel · CVE complets · Threat Intel',
+                style: TT.sans(size: 12, color: TT.muted)),
+            const SizedBox(height: 10),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              color: TT.accent,
+              child: Center(
+                child: Text('UPGRADE →',
+                    style: TT.mono(
+                        size: 11,
+                        weight: FontWeight.w700,
+                        color: TT.bg,
+                        letterSpacing: 1)),
               ),
-              child: Text('Voir', style: GoogleFonts.inter(
-                fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF7C3AED),
-              )),
             ),
           ],
         ),
@@ -371,238 +250,132 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildSectionHeader(String title) => Padding(
-    padding: const EdgeInsets.only(bottom: 12, left: 2),
-    child: Text(title, style: GoogleFonts.inter(
-      fontSize: 11, fontWeight: FontWeight.bold,
-      color: const Color(0xFF38BDF8).withValues(alpha: 0.8), letterSpacing: 1.4,
-    )),
-  );
-
-  Widget _buildCard(List<Widget> children) => Container(
-    decoration: BoxDecoration(
-      color: Colors.white.withValues(alpha: 0.03),
-      borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
-    ),
-    child: Column(children: children),
-  );
-
-  Widget _buildDivider() =>
-      Divider(height: 1, color: Colors.white.withValues(alpha: 0.05), indent: 52);
-
-  Widget _buildToggle(IconData icon, String label, bool value, Color color, ValueChanged<bool> onChanged) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: Row(children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-          child: Icon(icon, size: 18, color: color),
+  Widget _buildSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 14, 12, 0),
+          child: Text('// CONFIG',
+              style: TT.mono(
+                  size: 10, color: TT.muted, letterSpacing: 1)),
         ),
-        const SizedBox(width: 14),
-        Expanded(child: Text(label, style: GoogleFonts.inter(
-          fontSize: 15, fontWeight: FontWeight.w500, color: Colors.white.withValues(alpha: 0.9),
-        ))),
-        Switch(value: value, onChanged: onChanged,
-          activeColor: const Color(0xFF38BDF8),
-          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap),
-      ]),
-    );
-  }
-
-  Widget _buildNavRow(IconData icon, String label, String? subtitle, {VoidCallback? onTap}) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Row(children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: const Color(0xFF38BDF8).withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(8),
+        ...[
+          _SettingsRow(
+            label: 'NOTIFICATIONS',
+            value:
+                '${[_notifCritique, _notifEleve, _notifMoyen].where((b) => b).length} actives',
+            onTap: () => Navigator.pushNamed(context, '/notifications'),
+          ),
+          _SettingsRow(
+            label: 'NEWSLETTER',
+            value: _newsletterFreqLabel().toUpperCase(),
+            onTap: _showNewsletterSheet,
+          ),
+          _SettingsRow(
+            label: 'LANGUE',
+            value: _currentLang.toUpperCase(),
+            onTap: _toggleLanguage,
+          ),
+          _SettingsRow(
+            label: 'SOURCES',
+            value: '29 actives',
+            onTap: () => Navigator.pushNamed(context, '/categories'),
+          ),
+          _SettingsRow(
+            label: 'VERSION',
+            value: '1.0.0',
+          ),
+          _SettingsRow(
+            label: 'CGU / CONFIDENTIALITÉ',
+            value: '',
+            onTap: () => Navigator.pushNamed(context, '/legal'),
+          ),
+          if (_isLoggedIn)
+            _SettingsRow(
+              label: 'DÉCONNEXION',
+              value: '',
+              labelColor: TT.red,
+              onTap: _logout,
+            )
+          else
+            _SettingsRow(
+              label: 'SE CONNECTER',
+              value: '',
+              labelColor: TT.accent,
+              onTap: () => Navigator.pushNamed(context, '/login'),
             ),
-            child: Icon(icon, size: 18, color: const Color(0xFF38BDF8)),
-          ),
-          const SizedBox(width: 14),
-          Expanded(child: Text(label, style: GoogleFonts.inter(
-            fontSize: 15, fontWeight: FontWeight.w500, color: Colors.white.withValues(alpha: 0.9),
-          ))),
-          if (subtitle != null) Text(subtitle, style: GoogleFonts.inter(
-            fontSize: 13, color: Colors.white.withValues(alpha: 0.4),
-          )),
-          const SizedBox(width: 6),
-          Icon(LucideIcons.chevronRight, size: 16, color: Colors.white.withValues(alpha: 0.25)),
-        ]),
-      ),
+        ],
+      ],
     );
   }
 
-  Widget _buildInfoRow(IconData icon, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      child: Row(children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.05),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(icon, size: 18, color: Colors.white.withValues(alpha: 0.4)),
-        ),
-        const SizedBox(width: 14),
-        Expanded(child: Text(label, style: GoogleFonts.inter(
-          fontSize: 15, fontWeight: FontWeight.w500, color: Colors.white.withValues(alpha: 0.9),
-        ))),
-        Text(value, style: GoogleFonts.inter(fontSize: 13, color: Colors.white.withValues(alpha: 0.4))),
-      ]),
-    );
-  }
-
-  Widget _buildLogoutButton() {
-    return SizedBox(
-      width: double.infinity,
-      height: 52,
-      child: OutlinedButton.icon(
-        onPressed: _logout,
-        icon: const Icon(LucideIcons.logOut, color: Color(0xFFEF4444), size: 18),
-        label: Text('Se déconnecter', style: GoogleFonts.inter(
-          fontSize: 15, fontWeight: FontWeight.bold, color: const Color(0xFFEF4444),
-        )),
-        style: OutlinedButton.styleFrom(
-          side: const BorderSide(color: Color(0xFFEF4444), width: 1),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLoginButton() {
-    return SizedBox(
-      width: double.infinity,
-      height: 52,
-      child: ElevatedButton.icon(
-        onPressed: () => Navigator.pushNamed(context, '/login'),
-        icon: const Icon(LucideIcons.logIn, size: 18),
-        label: Text('Se connecter', style: GoogleFonts.inter(
-          fontSize: 15, fontWeight: FontWeight.bold,
-        )),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF135BEC),
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _logout() async {
-    await FirebaseAuth.instance.signOut();
-    if (!mounted) return;
-    Navigator.pushReplacementNamed(context, '/');
-  }
-
-  // ── Modals ──────────────────────────────────────────────────────
-
-  void _showPremiumSheet() {
+  void _showNewsletterSheet() {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      isScrollControlled: true,
       builder: (_) => Container(
-        decoration: const BoxDecoration(
-          color: Color(0xFF0F172A),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
+        color: TT.surface,
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(width: 40, height: 4, decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(2),
-            )),
-            const SizedBox(height: 24),
-            const Icon(LucideIcons.crown, color: Colors.amber, size: 48),
+            Text('// EMAIL · FRÉQUENCE',
+                style: TT.mono(
+                    size: 10, color: TT.muted, letterSpacing: 1.5)),
             const SizedBox(height: 16),
-            Text('Cybrief PREMIUM', style: GoogleFonts.inter(
-              fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white,
-            )),
-            const SizedBox(height: 8),
-            Text('Intelligence cyber sans limites', style: GoogleFonts.inter(
-              fontSize: 14, color: Colors.white.withValues(alpha: 0.5),
-            )),
-            const SizedBox(height: 28),
-            _premiumFeature(LucideIcons.zap, 'Alertes temps réel', 'Notifié instantanément'),
-            _premiumFeature(LucideIcons.shieldAlert, 'CVE exclusifs', 'Base complète NVD + CISA'),
-            _premiumFeature(LucideIcons.fileText, 'Rapports détaillés', 'Analyses approfondies'),
-            _premiumFeature(LucideIcons.rss, 'Sources illimitées', 'Toutes les sources actives'),
-            const SizedBox(height: 28),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF7C3AED), Color(0xFF135BEC)],
-                ),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(children: [
-                Text('9,99 € / mois', style: GoogleFonts.inter(
-                  fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white,
-                )),
-                Text('ou 79,99 € / an — économisez 33%', style: GoogleFonts.inter(
-                  fontSize: 13, color: Colors.white.withValues(alpha: 0.7),
-                )),
-              ]),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.amber,
-                  foregroundColor: Colors.black,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: Text('Commencer l\'essai gratuit 7 jours', style: GoogleFonts.inter(
-                  fontWeight: FontWeight.bold, fontSize: 15,
-                )),
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text('Sans engagement · Annulable à tout moment', style: GoogleFonts.inter(
-              fontSize: 12, color: Colors.white.withValues(alpha: 0.35),
-            )),
+            for (final freq in ['daily', 'weekly', 'off'])
+              _buildFreqOption(freq),
           ],
         ),
       ),
     );
   }
 
-  Widget _premiumFeature(IconData icon, String title, String subtitle) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
-      child: Row(children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.amber.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(icon, size: 18, color: Colors.amber),
+  Widget _buildFreqOption(String freq) {
+    final labels = {
+      'daily':  'QUOTIDIEN (18h30)',
+      'weekly': 'HEBDOMADAIRE (LUNDI)',
+      'off':    'DÉSACTIVÉ',
+    };
+    final isSelected = _newsletterFreq == freq;
+    return GestureDetector(
+      onTap: () async {
+        setState(() => _newsletterFreq = freq);
+        Navigator.pop(context);
+        final uid = FirebaseAuth.instance.currentUser?.uid;
+        if (uid == null) return;
+        if (freq == 'off') {
+          await UserService.unsubscribeNewsletter(uid);
+        } else {
+          await UserService.subscribeNewsletter(uid,
+              frequency: freq, language: _currentLang);
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        decoration: BoxDecoration(
+          border: Border.all(
+              color: isSelected ? TT.accent : TT.line, width: 1),
+          color: isSelected ? TT.accent.withOpacity(0.08) : Colors.transparent,
         ),
-        const SizedBox(width: 14),
-        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(title, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white)),
-          Text(subtitle, style: GoogleFonts.inter(fontSize: 12, color: Colors.white.withValues(alpha: 0.45))),
-        ]),
-        const Spacer(),
-        const Icon(LucideIcons.check, size: 18, color: Colors.amber),
-      ]),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(labels[freq]!,
+                  style: TT.mono(
+                      size: 11,
+                      weight: isSelected ? FontWeight.w700 : FontWeight.w400,
+                      color: isSelected ? TT.accent : TT.text,
+                      letterSpacing: 0.5)),
+            ),
+            if (isSelected)
+              const Icon(Icons.check, size: 14, color: TT.accent),
+          ],
+        ),
+      ),
     );
   }
 
@@ -616,54 +389,74 @@ class _ProfileScreenState extends State<ProfileScreen> {
       isScrollControlled: true,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModalState) => Padding(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom),
           child: Container(
-            decoration: const BoxDecoration(
-              color: Color(0xFF0F172A),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-            ),
-            padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+            color: TT.surface,
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(2),
-                ))),
-                const SizedBox(height: 24),
-                Text('Modifier le profil', style: GoogleFonts.inter(
-                  fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white,
-                )),
-                const SizedBox(height: 20),
-                _buildModalTextField('Nom complet', _displayName, LucideIcons.user, controller: nameCtrl),
-                const SizedBox(height: 14),
-                _buildModalTextField('E-mail', _displayEmail, LucideIcons.mail, readOnly: true),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: saving ? null : () async {
-                      setModalState(() => saving = true);
-                      final newName = nameCtrl.text.trim();
-                      if (newName.isNotEmpty && newName != _displayName) {
-                        await FirebaseAuth.instance.currentUser?.updateDisplayName(newName);
-                        final uid = FirebaseAuth.instance.currentUser?.uid;
-                        if (uid != null) {
-                          await UserService.updateUser(uid, {'displayName': newName});
-                        }
-                      }
-                      if (ctx.mounted) Navigator.pop(ctx);
-                      if (mounted) setState(() {});
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF38BDF8),
-                      foregroundColor: Colors.black,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                Text('// MODIFIER PROFIL',
+                    style: TT.mono(
+                        size: 10, color: TT.muted, letterSpacing: 1.5)),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: nameCtrl,
+                  style: TT.sans(size: 15, color: TT.text),
+                  decoration: InputDecoration(
+                    hintText: 'Nom complet',
+                    hintStyle: TT.sans(size: 15, color: TT.muted),
+                    filled: true,
+                    fillColor: TT.line,
+                    border: OutlineInputBorder(
+                        borderSide: BorderSide(color: TT.line)),
+                    enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: TT.line)),
+                    focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: TT.accent)),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                GestureDetector(
+                  onTap: saving
+                      ? null
+                      : () async {
+                          setModalState(() => saving = true);
+                          final newName = nameCtrl.text.trim();
+                          if (newName.isNotEmpty &&
+                              newName != _displayName) {
+                            await FirebaseAuth.instance.currentUser
+                                ?.updateDisplayName(newName);
+                            final uid =
+                                FirebaseAuth.instance.currentUser?.uid;
+                            if (uid != null) {
+                              await UserService.updateUser(
+                                  uid, {'displayName': newName});
+                            }
+                          }
+                          if (ctx.mounted) Navigator.pop(ctx);
+                          if (mounted) setState(() {});
+                        },
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    color: TT.accent,
+                    child: Center(
+                      child: saving
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                  color: Colors.black, strokeWidth: 2))
+                          : Text('SAUVEGARDER',
+                              style: TT.mono(
+                                  size: 11,
+                                  weight: FontWeight.w700,
+                                  color: TT.bg,
+                                  letterSpacing: 1)),
                     ),
-                    child: saving
-                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
-                        : Text('Sauvegarder', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15)),
                   ),
                 ),
               ],
@@ -673,105 +466,46 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
+}
 
-  void _updateNotif(String type, bool value) {
-    setState(() {
-      if (type == 'critical') _notifCritique = value;
-      if (type == 'high') _notifEleve = value;
-      if (type == 'medium') _notifMoyen = value;
-    });
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return;
-    final data = <String, dynamic>{};
-    if (type == 'critical') data['notifCritical'] = value;
-    if (type == 'high') data['notifHigh'] = value;
-    if (type == 'medium') data['notifMedium'] = value;
-    UserService.updateUser(uid, data);
-  }
+class _SettingsRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color? labelColor;
+  final VoidCallback? onTap;
 
-  Widget _buildModalTextField(String label, String hint, IconData? icon, {TextEditingController? controller, bool readOnly = false}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: GoogleFonts.inter(
-          fontSize: 12, fontWeight: FontWeight.bold,
-          color: Colors.white.withValues(alpha: 0.5), letterSpacing: 0.8,
-        )),
-        const SizedBox(height: 8),
-        TextField(
-          controller: controller,
-          readOnly: readOnly,
-          style: GoogleFonts.inter(color: readOnly ? Colors.white.withValues(alpha: 0.4) : Colors.white, fontSize: 15),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: GoogleFonts.inter(color: Colors.white.withValues(alpha: 0.3)),
-            prefixIcon: icon != null ? Icon(icon, size: 18, color: const Color(0xFF38BDF8)) : null,
-            filled: true,
-            fillColor: Colors.white.withValues(alpha: readOnly ? 0.02 : 0.05),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFF38BDF8)),
-            ),
-          ),
+  const _SettingsRow({
+    required this.label,
+    required this.value,
+    this.labelColor,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+        decoration: const BoxDecoration(
+          border: Border(bottom: BorderSide(color: TT.line, width: 1)),
         ),
-      ],
-    );
-  }
-
-  void _showChangePassword() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (_) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-        child: Container(
-          decoration: const BoxDecoration(
-            color: Color(0xFF0F172A),
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(2),
-              ))),
-              const SizedBox(height: 24),
-              Text('Changer le mot de passe', style: GoogleFonts.inter(
-                fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white,
-              )),
-              const SizedBox(height: 20),
-              _buildModalTextField('Mot de passe actuel', '••••••••••', LucideIcons.lock),
-              const SizedBox(height: 14),
-              _buildModalTextField('Nouveau mot de passe', '••••••••••', LucideIcons.lockOpen),
-              const SizedBox(height: 14),
-              _buildModalTextField('Confirmer le mot de passe', '••••••••••', LucideIcons.shieldCheck),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF38BDF8),
-                    foregroundColor: Colors.black,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: Text('Mettre à jour', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15)),
-                ),
-              ),
-            ],
-          ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(label,
+                style: TT.mono(
+                    size: 12,
+                    weight: FontWeight.w500,
+                    color: labelColor ?? TT.text)),
+            Row(children: [
+              Text(value, style: TT.mono(size: 11, color: TT.muted)),
+              const SizedBox(width: 8),
+              if (onTap != null)
+                Text('›',
+                    style: TT.mono(size: 14, color: TT.muted)),
+            ]),
+          ],
         ),
       ),
     );

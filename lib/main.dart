@@ -21,27 +21,32 @@ import 'screens/legal_screen.dart';
 import 'l10n/app_localizations.dart';
 import 'services/subscription_service.dart';
 import 'services/user_service.dart';
+import 'firebase_options.dart';
 
 final GlobalKey<NavigatorState> globalNavigatorKey = GlobalKey<NavigatorState>();
+
+// Handler background (app fermée/arrière-plan) — doit être top-level
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  // Notification traitée nativement par l'OS — pas d'action supplémentaire requise
+}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Firebase.initializeApp(
-    options: const FirebaseOptions(
-      apiKey: 'AIzaSyBgDIF0uyElGVlAxazcCjZxz0PbbLYqAtM',
-      appId: '1:694709746993:ios:0b9d764809618e34768410',
-      messagingSenderId: '694709746993',
-      projectId: 'gen-lang-client-0845651189',
-      storageBucket: 'gen-lang-client-0845651189.firebasestorage.app',
-      iosClientId: '694709746993-8jcdtq1ud1gem5ihdiki58untcjf1e2a.apps.googleusercontent.com',
-      iosBundleId: 'com.badaoui.cybrief',
-    ),
+    options: DefaultFirebaseOptions.currentPlatform,
   );
 
   // Initialiser RevenueCat
   final uid = FirebaseAuth.instance.currentUser?.uid;
   await SubscriptionService.initialize(uid);
+
+  // Handler messages background
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
   // Enregistrer le token FCM pour les push notifications
   await _initFcm(uid);
@@ -138,19 +143,19 @@ class _CybriefAppState extends State<CybriefApp> {
       ],
       theme: ThemeData(
         brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF0F172A),
-        primaryColor: const Color(0xFF135BEC),
+        scaffoldBackgroundColor: const Color(0xFF0A0A0A),
+        primaryColor: const Color(0xFF00D4FF),
         colorScheme: const ColorScheme.dark(
-          primary: Color(0xFF135BEC),
-          secondary: Color(0xFF38BDF8),
-          surface: Color(0xFF1E293B),
-          onSurface: Colors.white,
+          primary: Color(0xFF00D4FF),
+          secondary: Color(0xFF00D4FF),
+          surface: Color(0xFF111111),
+          onSurface: Color(0xFFE8E8E8),
         ),
         textTheme: GoogleFonts.interTextTheme(
           ThemeData.dark().textTheme,
         ).apply(
-          bodyColor: Colors.white,
-          displayColor: Colors.white,
+          bodyColor: const Color(0xFFE8E8E8),
+          displayColor: const Color(0xFFE8E8E8),
         ),
         useMaterial3: true,
       ),
@@ -159,6 +164,7 @@ class _CybriefAppState extends State<CybriefApp> {
         '/login': (context) => const LoginScreen(),
         '/flux': (context) => const FluxScreen(),
         '/detail': (context) => const ThreatDetailScreen(),
+        '/threat-detail': (context) => const ThreatDetailScreen(),
         '/signup': (context) => const SignupScreen(),
         '/profile': (context) => const ProfileScreen(),
         '/notifications': (context) => const NotificationsScreen(),
@@ -167,6 +173,7 @@ class _CybriefAppState extends State<CybriefApp> {
         '/subscribe': (context) => const PaywallScreen(),
         '/terms': (context) => const LegalScreen(type: LegalType.terms),
         '/privacy': (context) => const LegalScreen(type: LegalType.privacy),
+        '/legal': (context) => const LegalScreen(type: LegalType.terms),
       },
     );
   }

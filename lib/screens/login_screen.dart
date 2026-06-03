@@ -14,16 +14,20 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _emailCtrl    = TextEditingController();
   final _passwordCtrl = TextEditingController();
+  final _passwordFocus = FocusNode();
   bool _loading       = false;
   bool _loadingGoogle = false;
   bool _loadingApple  = false;
   bool _showPassword  = false;
   String? _error;
 
+  static final _emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+
   @override
   void dispose() {
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
+    _passwordFocus.dispose();
     super.dispose();
   }
 
@@ -33,6 +37,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (email.isEmpty || password.isEmpty) {
       setState(() => _error = 'Remplis tous les champs.');
+      return;
+    }
+    if (!_emailRegex.hasMatch(email)) {
+      setState(() => _error = 'Adresse e-mail invalide.');
       return;
     }
 
@@ -158,6 +166,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 hint: 'nom@entreprise.com',
                 isPassword: false,
                 keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.next,
+                onSubmitted: () => _passwordFocus.requestFocus(),
               ),
               const SizedBox(height: 24),
 
@@ -168,6 +178,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 controller: _passwordCtrl,
                 hint: '••••••••••••',
                 isPassword: !_showPassword,
+                focusNode: _passwordFocus,
+                textInputAction: TextInputAction.done,
+                onSubmitted: _login,
                 suffixIcon: IconButton(
                   icon: Icon(
                     _showPassword ? LucideIcons.eyeOff : LucideIcons.eye,
@@ -435,13 +448,18 @@ class _LoginScreenState extends State<LoginScreen> {
     required bool isPassword,
     TextInputType? keyboardType,
     Widget? suffixIcon,
+    TextInputAction? textInputAction,
+    VoidCallback? onSubmitted,
+    FocusNode? focusNode,
   }) {
     return TextField(
       controller: controller,
       obscureText: isPassword,
       keyboardType: keyboardType,
+      focusNode: focusNode,
+      textInputAction: textInputAction ?? TextInputAction.done,
       style: const TextStyle(color: Colors.white),
-      onSubmitted: (_) => _login(),
+      onSubmitted: (_) => onSubmitted?.call(),
       decoration: InputDecoration(
         hintText: hint,
         hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.15)),

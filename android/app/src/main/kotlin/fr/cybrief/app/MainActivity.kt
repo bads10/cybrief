@@ -1,4 +1,4 @@
-package com.example.cybrief
+package fr.cybrief.app
 
 import io.flutter.embedding.android.FlutterActivity
 

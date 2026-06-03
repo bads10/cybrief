@@ -67,3 +67,5 @@ backend/.env
 .env
 android/key.properties
 android/key.properties
+ios/build/
+build/
