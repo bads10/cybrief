@@ -71,8 +71,8 @@ app.get('/api/articles', async (req, res) => {
       return res.json({ articles, quotaReached: false, nextCursor });
     }
 
-    // Free : 5 articles/jour
-    const FREE_DAILY_LIMIT = 5;
+    // Free : 5 articles/jour (configurable via env pour les tests)
+    const FREE_DAILY_LIMIT = parseInt(process.env.FREE_DAILY_LIMIT || '5');
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
 
@@ -117,10 +117,10 @@ app.get('/api/articles', async (req, res) => {
 function _articleSelect(lang) {
   return {
     id: true,
-    title: lang === 'en' ? false : true,
-    titleEn: lang === 'en' ? true : false,
-    summary: lang === 'en' ? false : true,
-    summaryEn: lang === 'en' ? true : false,
+    title: true,           // toujours retourné comme fallback
+    titleEn: true,         // null si pas encore traduit
+    summary: true,         // fallback FR
+    summaryEn: true,       // null si pas encore traduit
     criticality: true,
     tags: true,
     url: true,
@@ -462,6 +462,35 @@ app.post('/admin/reprocess/:id', adminAuth, async (req, res) => {
   }
 });
 
+// Reset quota journalier d'un user (ou tous)
+app.post('/admin/reset-quota', adminAuth, async (req, res) => {
+  try {
+    const { userId } = req.body;
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const where = userId
+      ? { userId, viewedAt: { gte: startOfDay } }
+      : { viewedAt: { gte: startOfDay } };
+    const result = await prisma.articleView.deleteMany({ where });
+    res.json({ deleted: result.count, userId: userId || 'all' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Publier tous les drafts d'un coup
+app.post('/admin/publish-all-drafts', adminAuth, async (req, res) => {
+  try {
+    const result = await prisma.article.updateMany({
+      where: { status: 'DRAFT' },
+      data:  { status: 'PUBLISHED' },
+    });
+    res.json({ published: result.count });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post('/admin/reprocess-all', adminAuth, async (req, res) => {
   try {
     const drafts = await prisma.article.findMany({ where: { status: 'DRAFT' } });
@@ -547,16 +576,25 @@ app.post('/admin/translate-all', adminAuth, async (req, res) => {
 
     const { summarizeWithGemini } = require('./services/rss_cron');
     const sleep = ms => new Promise(r => setTimeout(r, ms));
+    const isTranslated = ai => !!(ai && ai.titleEn && ai.titleEn.trim() && ai.summaryEn && ai.summaryEn.trim());
     let done = 0;
     for (const article of articles) {
       try {
         const fakeItem = { title: article.title, link: article.url, contentSnippet: article.summary, content: article.summary };
         const ai = await summarizeWithGemini(fakeItem);
+        // Garde-fou : ne pas écraser du contenu correct par un fallback anglais
+        if (!isTranslated(ai)) {
+          console.warn(`[TranslateAll] ⏭  Quota/échec — ${article.id} ignoré`);
+          await sleep(5000);
+          continue;
+        }
         await prisma.article.update({
           where: { id: article.id },
           data: {
             title:           ai.title           || article.title,
+            titleEn:         ai.titleEn,
             summary:         ai.summary         || article.summary,
+            summaryEn:       ai.summaryEn,
             criticality:     ai.severity        || article.criticality,
             tags:            ai.tags            || article.tags,
             cve:             ai.cve             || '',
@@ -573,6 +611,38 @@ app.post('/admin/translate-all', adminAuth, async (req, res) => {
       }
     }
     console.log(`[TranslateAll] Terminé — ${done}/${articles.length} articles traduits`);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Retraduire un lot d'articles restés en anglais (titleEn null)
+app.post('/admin/retranslate', adminAuth, async (req, res) => {
+  try {
+    const limit = parseInt(req.body?.limit || '20', 10);
+    const remainingBefore = await prisma.article.count({
+      where: { status: 'PUBLISHED', titleEn: null },
+    });
+    res.json({
+      message: `Retraduction lancée (lot de ${limit})`,
+      pending: remainingBefore,
+    });
+
+    const { retranslateBatch } = require('./services/rss_cron');
+    retranslateBatch(limit).catch(e => console.error('[Retranslate admin]', e.message));
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Statut de traduction (combien d'articles restent en anglais)
+app.get('/admin/translation-status', adminAuth, async (req, res) => {
+  try {
+    const [total, untranslated] = await Promise.all([
+      prisma.article.count({ where: { status: 'PUBLISHED' } }),
+      prisma.article.count({ where: { status: 'PUBLISHED', titleEn: null } }),
+    ]);
+    res.json({ total, translated: total - untranslated, untranslated });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

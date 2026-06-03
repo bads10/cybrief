@@ -12,7 +12,16 @@ const MAX_ITEMS_PER_FEED = 3;
 // Délai entre chaque appel Gemini (ms) — 5s pour respecter la limite gratuite ~12 req/min
 const GEMINI_DELAY_MS = 5000;
 
+// Nombre d'articles non traduits (titleEn null) re-traités par run du cron
+const RETRANSLATE_BATCH = parseInt(process.env.RETRANSLATE_BATCH || '8', 10);
+
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Une traduction Gemini est considérée réussie seulement si les champs
+// bilingues sont présents — sinon on est sur un fallback quota/erreur.
+function isTranslated(ai) {
+  return !!(ai && ai.titleEn && ai.titleEn.trim() && ai.summaryEn && ai.summaryEn.trim());
+}
 
 console.log('[Cybrief][RSS] Module chargé — sources lues depuis la base de données');
 
@@ -119,7 +128,7 @@ async function ingestFeed(feed) {
         affectedSystems: ai.affectedSystems || '',
         iocs:            ai.iocs            || '',
         url:             item.link,
-        status:          'DRAFT',
+        status:          'PUBLISHED',
       },
     });
 
@@ -157,6 +166,78 @@ async function runAllFeeds() {
   console.log(
     `[Cybrief][RSS] ═══ Terminé — ${totalInserted} article(s) insérés, ${totalErrors} source(s) en erreur ═══\n`
   );
+
+  // Reprise des articles restés en anglais (quota épuisé lors d'un run précédent)
+  try {
+    await retranslateBatch();
+  } catch (e) {
+    console.error('[Cybrief][Retranslate] Erreur:', e.message);
+  }
+}
+
+// ── Re-traduction auto des articles restés en anglais ─────────────────────
+// Les articles ingérés pendant une fenêtre de quota Gemini épuisé (429) sont
+// sauvegardés en anglais brut, avec titleEn = null. À chaque run, on en reprend
+// un petit lot pour les traduire proprement, dès que le quota le permet.
+
+async function retranslateBatch(limit = RETRANSLATE_BATCH) {
+  const pending = await prisma.article.findMany({
+    where: { status: 'PUBLISHED', titleEn: null },
+    orderBy: { createdAt: 'desc' },
+    take: limit,
+  });
+
+  if (pending.length === 0) return { retranslated: 0, remaining: 0 };
+
+  console.log(`[Cybrief][Retranslate] ${pending.length} article(s) à retraduire`);
+  let done = 0;
+
+  for (const article of pending) {
+    try {
+      const fakeItem = {
+        title: article.title,
+        link: article.url,
+        contentSnippet: article.summary,
+        content: article.summary,
+      };
+      const ai = await summarizeWithGemini(fakeItem);
+
+      // Garde-fou : ne remplacer le contenu que si la traduction a réussi,
+      // sinon on écraserait du FR correct (ou on re-sauverait l'anglais).
+      if (!isTranslated(ai)) {
+        console.warn(`[Cybrief][Retranslate]   ⏭  Quota/échec — ${article.id} reporté au prochain run`);
+        await sleep(GEMINI_DELAY_MS);
+        continue;
+      }
+
+      await prisma.article.update({
+        where: { id: article.id },
+        data: {
+          title:           ai.title           || article.title,
+          titleEn:         ai.titleEn,
+          summary:         ai.summary         || article.summary,
+          summaryEn:       ai.summaryEn,
+          criticality:     ai.severity        || article.criticality,
+          tags:            ai.tags            || article.tags,
+          cve:             ai.cve             || article.cve,
+          attackType:      ai.attackType      || article.attackType,
+          affectedSystems: ai.affectedSystems || article.affectedSystems,
+          iocs:            ai.iocs            || article.iocs,
+        },
+      });
+      done++;
+      console.log(`[Cybrief][Retranslate]   ✓ ${(ai.title || article.title).slice(0, 60)}`);
+      await sleep(GEMINI_DELAY_MS);
+    } catch (e) {
+      console.error(`[Cybrief][Retranslate]   ✗ article ${article.id}: ${e.message}`);
+    }
+  }
+
+  const remaining = await prisma.article.count({
+    where: { status: 'PUBLISHED', titleEn: null },
+  });
+  console.log(`[Cybrief][Retranslate] Terminé — ${done} traduit(s), ${remaining} restant(s)`);
+  return { retranslated: done, remaining };
 }
 
 // ── Démarrage du cron ─────────────────────────────────────────────────────
@@ -189,4 +270,4 @@ function startRssCron() {
   console.log('[Cybrief][RSS] Crons planifiés — RSS:30min | Digest:18h30 | Newsletter:18h30/lundi 9h');
 }
 
-module.exports = { startRssCron, ingestFeed, runAllFeeds, summarizeWithGemini };
+module.exports = { startRssCron, ingestFeed, runAllFeeds, summarizeWithGemini, retranslateBatch };
