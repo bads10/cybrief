@@ -63,6 +63,91 @@ class _ProfileScreenState extends State<ProfileScreen> {
     Navigator.pushReplacementNamed(context, '/');
   }
 
+  Future<void> _confirmDeleteAccount() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: TT.surface,
+        shape: RoundedRectangleBorder(
+          side: const BorderSide(color: TT.line),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        title: Text('Supprimer le compte',
+            style: TT.sans(size: 16, weight: FontWeight.w700, color: TT.text)),
+        content: Text(
+          'Cette action est définitive. Votre compte, vos préférences et votre '
+          'historique seront supprimés et ne pourront pas être récupérés.\n\n'
+          'Pensez à résilier tout abonnement via Google Play au préalable.',
+          style: TT.sans(size: 13, color: TT.muted, height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Annuler', style: TT.mono(size: 12, color: TT.muted)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('SUPPRIMER',
+                style: TT.mono(size: 12, weight: FontWeight.w700, color: TT.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) await _deleteAccount();
+  }
+
+  Future<void> _deleteAccount() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(color: TT.accent, strokeWidth: 2),
+      ),
+    );
+
+    // 1. Supprimer les données côté backend
+    final backendOk = await UserService.deleteAccount(user.uid);
+
+    // 2. Supprimer le compte Firebase Auth
+    String? error;
+    try {
+      await user.delete();
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'requires-recent-login') {
+        error = 'Pour des raisons de sécurité, reconnecte-toi puis réessaie '
+            'de supprimer ton compte.';
+      } else {
+        error = 'Erreur lors de la suppression : ${e.message}';
+      }
+    } catch (_) {
+      error = 'Erreur inattendue lors de la suppression.';
+    }
+
+    if (!mounted) return;
+    Navigator.pop(context); // fermer le loader
+
+    if (error != null) {
+      // Données backend déjà supprimées : on déconnecte quand même
+      await FirebaseAuth.instance.signOut();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error), backgroundColor: TT.surface),
+      );
+      Navigator.pushReplacementNamed(context, '/');
+      return;
+    }
+
+    if (!backendOk) {
+      // Compte Firebase supprimé mais backend a échoué — on continue (best effort)
+    }
+    await FirebaseAuth.instance.signOut();
+    if (!mounted) return;
+    Navigator.pushReplacementNamed(context, '/');
+  }
+
   String get _displayName {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return 'Visiteur';
@@ -291,14 +376,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
             value: '',
             onTap: () => Navigator.pushNamed(context, '/legal'),
           ),
-          if (_isLoggedIn)
+          if (_isLoggedIn) ...[
             _SettingsRow(
               label: 'DÉCONNEXION',
               value: '',
               labelColor: TT.red,
               onTap: _logout,
-            )
-          else
+            ),
+            _SettingsRow(
+              label: 'SUPPRIMER MON COMPTE',
+              value: '',
+              labelColor: TT.red,
+              onTap: _confirmDeleteAccount,
+            ),
+          ] else
             _SettingsRow(
               label: 'SE CONNECTER',
               value: '',

@@ -58,6 +58,18 @@ class UserService {
     return false;
   }
 
+  // Supprimer le compte + données associées côté backend
+  static Future<bool> deleteAccount(String uid) async {
+    try {
+      final res = await http.delete(Uri.parse('$_baseUrl/api/users/$uid'));
+      if (res.statusCode == 200) {
+        await clearCache();
+        return true;
+      }
+    } catch (_) {}
+    return false;
+  }
+
   // Vérifier si l'user est premium
   static Future<bool> isPremium(String uid) async {
     final user = await getUser(uid);
