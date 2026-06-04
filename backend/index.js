@@ -233,6 +233,28 @@ app.patch('/api/users/:uid', async (req, res) => {
   }
 });
 
+// Supprimer le compte utilisateur + toutes les données associées (RGPD / Google Play)
+app.delete('/api/users/:uid', async (req, res) => {
+  const uid = req.params.uid;
+  try {
+    await prisma.$transaction([
+      // ArticleView.userId n'a pas de FK → suppression manuelle des vues
+      prisma.articleView.deleteMany({ where: { userId: uid } }),
+      prisma.user.delete({ where: { id: uid } }),
+    ]);
+    console.log(`[Account] Compte supprimé: ${uid}`);
+    res.json({ success: true, deleted: uid });
+  } catch (error) {
+    if (error.code === 'P2025') {
+      // User déjà absent : nettoyer les vues éventuelles et considérer comme supprimé
+      await prisma.articleView.deleteMany({ where: { userId: uid } }).catch(() => {});
+      return res.json({ success: true, deleted: uid, note: 'déjà supprimé' });
+    }
+    console.error('[Account] Erreur suppression:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Webhook RevenueCat — mise à jour des abonnements
 app.post('/api/webhooks/revenuecat', async (req, res) => {
   try {
