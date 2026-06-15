@@ -23,11 +23,11 @@ const X_SOURCES = [
   { name: 'X · @bluetouff',       handle: '@bluetouff',       feedUrl: '' },
 
   // ── Comptes EN ────────────────────────────────────────────────────────────
-  { name: 'X · @TheHackersNews',  handle: '@TheHackersNews',  feedUrl: '' },
+  { name: 'X · @TheHackersNews',  handle: '@TheHackersNews',  feedUrl: 'https://rss.app/feeds/bMhW63kWNBASSdZl.xml' },
   { name: 'X · @BleepinComputer', handle: '@BleepinComputer', feedUrl: '' },
   { name: 'X · @briankrebs',      handle: '@briankrebs',      feedUrl: '' },
   { name: 'X · @campuscodi',      handle: '@campuscodi',      feedUrl: '' }, // Catalin Cimpanu
-  { name: 'X · @vxunderground',   handle: '@vxunderground',   feedUrl: '' },
+  { name: 'X · @vxunderground',   handle: '@vxunderground',   feedUrl: 'https://rss.app/feeds/8LblLFDzXKxCTSUD.xml' },
   { name: 'X · @malwrhunterteam', handle: '@malwrhunterteam', feedUrl: '' },
   { name: 'X · @TheDFIRReport',   handle: '@TheDFIRReport',   feedUrl: '' },
   { name: 'X · @cyb3rops',        handle: '@cyb3rops',        feedUrl: '' }, // Florian Roth
