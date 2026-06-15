@@ -4,9 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../widgets/custom_bottom_nav_bar.dart';
-
-// URL du backend — localhost fonctionne dans le simulateur iOS
-const String _kBaseUrl = 'https://cybrief-production.up.railway.app';
+import '../services/api_constants.dart';
 
 class Article {
   final int id;
@@ -85,7 +83,7 @@ class _ThreatFeedScreenState extends State<ThreatFeedScreen> {
     setState(() { _loading = true; _error = null; });
     try {
       final response = await http
-          .get(Uri.parse('$_kBaseUrl/api/articles'))
+          .get(Uri.parse('$kApiBaseUrl/api/articles'))
           .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {

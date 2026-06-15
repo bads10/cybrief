@@ -1,1 +1,1 @@
-const String kApiBaseUrl = 'https://cybrief-production.up.railway.app';
+const String kApiBaseUrl = 'https://api.cybrief.fr';

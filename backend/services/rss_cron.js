@@ -2,15 +2,26 @@ const cron = require('node-cron');
 const RSSParser = require('rss-parser');
 const axios = require('axios');
 const prisma = require('./prisma');
+const { summarizeWithDeepSeek } = require('./deepseek_service');
 const { sendCriticalAlert, sendDailyDigest } = require('./notification_service');
 const { sendDailyBrief, sendWeeklyDigest } = require('./newsletter_service');
 const parser = new RSSParser();
 
-// Nombre max d'articles traités par feed par run (protection quota Gemini)
-const MAX_ITEMS_PER_FEED = 3;
+// Fournisseur IA : 'deepseek' (défaut) ou 'gemini'. Bascule via la variable d'env.
+const AI_PROVIDER = (process.env.AI_PROVIDER || 'deepseek').toLowerCase();
 
-// Délai entre chaque appel Gemini (ms) — 5s pour respecter la limite gratuite ~12 req/min
-const GEMINI_DELAY_MS = 5000;
+// Nombre max d'articles traités par feed par run (protection quota/rate-limit)
+const MAX_ITEMS_PER_FEED = parseInt(process.env.MAX_ITEMS_PER_FEED || '3', 10);
+
+// Délai entre chaque appel IA (ms). DeepSeek a des limites larges → court délai.
+// Gemini gratuit ~12 req/min → 5s. Réglable via AI_DELAY_MS.
+const AI_DELAY_MS = parseInt(
+  process.env.AI_DELAY_MS || (AI_PROVIDER === 'gemini' ? '5000' : '1200'),
+  10
+);
+
+// Catégorie utilisée pour les sources X/Twitter (via pont RSS, ex: RSS.app).
+const X_CATEGORY = 'X';
 
 // Nombre d'articles non traduits (titleEn null) re-traités par run du cron
 const RETRANSLATE_BATCH = parseInt(process.env.RETRANSLATE_BATCH || '8', 10);
@@ -89,10 +100,28 @@ Contenu: ${(item.contentSnippet || item.content || '').slice(0, 2000)}
   }
 }
 
+// ── Dispatcher IA (DeepSeek par défaut, fallback Gemini) ───────────────────
+// Retourne toujours un objet { ...champs, relevant } ou un fallback brut.
+// `opts.isTweet` active le filtrage de pertinence côté DeepSeek.
+
+async function summarize(item, opts = {}) {
+  if (AI_PROVIDER === 'deepseek') {
+    const out = await summarizeWithDeepSeek(item, opts);
+    if (out) return out;
+    // DeepSeek indisponible (clé/crédit/rate-limit) → on tente Gemini en secours
+    console.warn('[Cybrief][AI] DeepSeek indisponible → fallback Gemini');
+    const g = await summarizeWithGemini(item);
+    return { relevant: true, ...g };
+  }
+  const g = await summarizeWithGemini(item);
+  return { relevant: true, ...g };
+}
+
 // ── Ingestion d'un feed ────────────────────────────────────────────────────
 
 async function ingestFeed(feed) {
   const { url, name, category } = feed;
+  const isTweet = category === X_CATEGORY;
   console.log(`[Cybrief][RSS] ↓ ${name} (${category})`);
 
   let parsed;
@@ -113,7 +142,20 @@ async function ingestFeed(feed) {
     const existing = await prisma.article.findUnique({ where: { url: item.link } });
     if (existing) { skipped++; continue; }
 
-    const ai = await summarizeWithGemini(item);
+    const ai = await summarize(item, { isTweet });
+
+    // Filtre anti-bruit pour X/Twitter : on ignore les tweets jugés hors-sujet.
+    if (isTweet && ai.relevant === false) {
+      console.log(`[Cybrief][RSS]   ⏭  Tweet ignoré (non pertinent): ${(item.title || '').slice(0, 60)}`);
+      skipped++;
+      await sleep(AI_DELAY_MS);
+      continue;
+    }
+
+    // Crédit de la source X dans les tags (lien vers le tweet conservé dans url).
+    const tags = isTweet
+      ? [ai.tags, `via ${name}`].filter(Boolean).join(', ')
+      : (ai.tags || '');
 
     const savedArticle = await prisma.article.create({
       data: {
@@ -122,7 +164,7 @@ async function ingestFeed(feed) {
         summary:         ai.summary         || '',
         summaryEn:       ai.summaryEn       || null,
         criticality:     ai.severity        || 'Moyen',
-        tags:            ai.tags            || '',
+        tags,
         cve:             ai.cve             || '',
         attackType:      ai.attackType      || '',
         affectedSystems: ai.affectedSystems || '',
@@ -141,7 +183,7 @@ async function ingestFeed(feed) {
     console.log(`[Cybrief][RSS]   ✓ ${(ai.title || item.title)?.slice(0, 70)}`);
     inserted++;
 
-    await sleep(GEMINI_DELAY_MS);
+    await sleep(AI_DELAY_MS);
   }
 
   console.log(`[Cybrief][RSS]   → ${name}: ${inserted} insérés, ${skipped} ignorés`);
@@ -200,13 +242,13 @@ async function retranslateBatch(limit = RETRANSLATE_BATCH) {
         contentSnippet: article.summary,
         content: article.summary,
       };
-      const ai = await summarizeWithGemini(fakeItem);
+      const ai = await summarize(fakeItem);
 
       // Garde-fou : ne remplacer le contenu que si la traduction a réussi,
       // sinon on écraserait du FR correct (ou on re-sauverait l'anglais).
       if (!isTranslated(ai)) {
         console.warn(`[Cybrief][Retranslate]   ⏭  Quota/échec — ${article.id} reporté au prochain run`);
-        await sleep(GEMINI_DELAY_MS);
+        await sleep(AI_DELAY_MS);
         continue;
       }
 
@@ -227,7 +269,7 @@ async function retranslateBatch(limit = RETRANSLATE_BATCH) {
       });
       done++;
       console.log(`[Cybrief][Retranslate]   ✓ ${(ai.title || article.title).slice(0, 60)}`);
-      await sleep(GEMINI_DELAY_MS);
+      await sleep(AI_DELAY_MS);
     } catch (e) {
       console.error(`[Cybrief][Retranslate]   ✗ article ${article.id}: ${e.message}`);
     }
@@ -243,7 +285,7 @@ async function retranslateBatch(limit = RETRANSLATE_BATCH) {
 // ── Démarrage du cron ─────────────────────────────────────────────────────
 
 function startRssCron() {
-  console.log('[Cybrief][RSS] Démarrage du cron RSS');
+  console.log(`[Cybrief][RSS] Démarrage du cron RSS — IA: ${AI_PROVIDER} (délai ${AI_DELAY_MS}ms)`);
 
   runAllFeeds().catch(err => console.error('[Cybrief][RSS] Erreur bootstrap:', err));
 
@@ -270,4 +312,4 @@ function startRssCron() {
   console.log('[Cybrief][RSS] Crons planifiés — RSS:30min | Digest:18h30 | Newsletter:18h30/lundi 9h');
 }
 
-module.exports = { startRssCron, ingestFeed, runAllFeeds, summarizeWithGemini, retranslateBatch };
+module.exports = { startRssCron, ingestFeed, runAllFeeds, summarize, summarizeWithGemini, retranslateBatch };

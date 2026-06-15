@@ -413,6 +413,29 @@ app.post('/admin/sources/seed', adminAuth, async (req, res) => {
   res.json({ created, skipped, total: CYBER_SOURCES.length });
 });
 
+// Ajout en masse de sources X/Twitter (via pont X→RSS, ex: RSS.app).
+// Body : { feeds: [{ name, url }, ...] }  — url = flux RSS généré par le pont.
+// Catégorie forcée à 'X' → le cron applique le filtre anti-bruit DeepSeek.
+app.post('/admin/sources/seed-x', adminAuth, async (req, res) => {
+  const feeds = Array.isArray(req.body?.feeds) ? req.body.feeds : [];
+  if (feeds.length === 0) {
+    return res.status(400).json({ error: 'feeds requis : [{ name, url }]' });
+  }
+  let created = 0, skipped = 0;
+  for (const f of feeds) {
+    if (!f.url || !f.name) { skipped++; continue; }
+    try {
+      await prisma.source.upsert({
+        where: { url: f.url },
+        update: { name: f.name, category: 'X', active: true },
+        create: { name: f.name, url: f.url, category: 'X', active: true },
+      });
+      created++;
+    } catch { skipped++; }
+  }
+  res.json({ created, skipped, total: feeds.length });
+});
+
 app.delete('/admin/sources/:id', adminAuth, async (req, res) => {
   const { id } = req.params;
   try {
@@ -721,6 +744,9 @@ app.get('/admin/newsletter/subscribers', adminAuth, async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+// ── Health check (Fly.io / monitoring) ────────────────────────────────────
+app.get('/healthz', (req, res) => res.status(200).json({ status: 'ok' }));
 
 // ── Start ─────────────────────────────────────────────────────────────────
 
