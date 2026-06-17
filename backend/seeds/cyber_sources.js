@@ -60,8 +60,8 @@ const SOURCES = [
     category: 'ThreatIntel',
   },
   {
-    name: 'Mandiant',
-    url: 'https://www.mandiant.com/resources/blog/rss.xml',
+    name: 'Check Point Research',
+    url: 'https://research.checkpoint.com/feed/',
     category: 'ThreatIntel',
   },
 

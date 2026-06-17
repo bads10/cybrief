@@ -382,7 +382,7 @@ app.post('/admin/sources/seed', adminAuth, async (req, res) => {
     { name: 'GreyNoise',                url: 'https://www.greynoise.io/blog/rss.xml',                          category: 'ThreatIntel' },
     { name: 'Recorded Future',          url: 'https://www.recordedfuture.com/feed',                            category: 'ThreatIntel' },
     { name: 'Microsoft Security',       url: 'https://www.microsoft.com/en-us/security/blog/feed/',            category: 'ThreatIntel' },
-    { name: 'Mandiant',                 url: 'https://www.mandiant.com/resources/blog/rss.xml',                category: 'ThreatIntel' },
+    { name: 'Check Point Research',     url: 'https://research.checkpoint.com/feed/',                          category: 'ThreatIntel' },
     { name: 'CISA Advisories',          url: 'https://www.cisa.gov/cybersecurity-advisories/all.xml',          category: 'CVE' },
     { name: 'SANS Internet Storm Center', url: 'https://isc.sans.edu/rssfeed_full.xml',                        category: 'CVE' },
     { name: 'Rapid7 Blog',              url: 'https://www.rapid7.com/blog/rss/',                               category: 'CVE' },
