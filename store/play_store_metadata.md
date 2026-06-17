@@ -36,7 +36,7 @@ GRATUIT & PREMIUM
 
 Cybrief, c'est votre veille cyber quotidienne, livrée avec précision et clarté.
 
-Confidentialité : https://bads10.github.io/cybrief/privacy.html
+Confidentialité : https://cybrief.fr/privacy
 Contact : hello@cybrief.fr
 
 ### Mots-clés / Tags
@@ -80,7 +80,7 @@ FREE & PREMIUM
 
 Cybrief: your daily cyber intelligence, delivered with precision and clarity.
 
-Privacy: https://bads10.github.io/cybrief/privacy.html
+Privacy: https://cybrief.fr/privacy
 Contact: hello@cybrief.fr
 
 ### Keywords / Tags
@@ -92,6 +92,6 @@ cybersecurity, threat intelligence, CVE, infosec, hacking, ransomware, SOC, CERT
 - **Catégorie** : Actualités et magazines (ou Outils)
 - **Email développeur** : hello@cybrief.fr
 - **Site web** : https://bads10.github.io/cybrief/
-- **Politique de confidentialité** : https://bads10.github.io/cybrief/privacy.html
+- **Politique de confidentialité** : https://cybrief.fr/privacy
 - **Classification du contenu** : Tout public
 - **Type d'app** : Application (gratuite avec achats intégrés)

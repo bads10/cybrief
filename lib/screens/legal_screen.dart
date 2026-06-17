@@ -74,7 +74,7 @@ Cybrief se réserve le droit de modifier ces conditions à tout moment. Les util
 
 ## 7. Contact
 
-Pour toute question : **contact@cybrief.io**
+Pour toute question : **hello@cybrief.fr**
 ''';
 
   // ── Terms of Use EN ──────────────────────────────────────────────────────
@@ -114,7 +114,7 @@ Cybrief reserves the right to modify these terms at any time. Users will be noti
 
 ## 7. Contact
 
-For any questions: **contact@cybrief.io**
+For any questions: **hello@cybrief.fr**
 ''';
 
   // ── Politique de confidentialité FR ──────────────────────────────────────
@@ -152,11 +152,11 @@ Vos données ne sont **jamais vendues** à des tiers. Elles peuvent être transm
 
 ## 4. Conservation des données
 
-Vos données sont conservées tant que votre compte est actif. Vous pouvez demander la suppression de votre compte et de toutes vos données à **contact@cybrief.io**.
+Vos données sont conservées tant que votre compte est actif. Vous pouvez demander la suppression de votre compte et de toutes vos données à **hello@cybrief.fr**.
 
 ## 5. Vos droits (RGPD)
 
-Conformément au RGPD, vous disposez des droits d'accès, de rectification, d'effacement, de portabilité et d'opposition. Pour exercer ces droits : **contact@cybrief.io**
+Conformément au RGPD, vous disposez des droits d'accès, de rectification, d'effacement, de portabilité et d'opposition. Pour exercer ces droits : **hello@cybrief.fr**
 
 ## 6. Cookies et tracking
 
@@ -168,7 +168,7 @@ Les données sont chiffrées en transit (HTTPS/TLS). Les mots de passe ne sont j
 
 ## 8. Contact
 
-Responsable du traitement : **Cybrief — contact@cybrief.io**
+Responsable du traitement : **Cybrief — hello@cybrief.fr**
 ''';
 
   // ── Privacy Policy EN ────────────────────────────────────────────────────
@@ -206,11 +206,11 @@ Your data is **never sold** to third parties. It may be shared with:
 
 ## 4. Data Retention
 
-Your data is retained as long as your account is active. You can request deletion of your account and all your data at **contact@cybrief.io**.
+Your data is retained as long as your account is active. You can request deletion of your account and all your data at **hello@cybrief.fr**.
 
 ## 5. Your Rights (GDPR)
 
-Under GDPR, you have the right to access, rectification, erasure, portability, and objection. To exercise these rights: **contact@cybrief.io**
+Under GDPR, you have the right to access, rectification, erasure, portability, and objection. To exercise these rights: **hello@cybrief.fr**
 
 ## 6. Cookies and Tracking
 
@@ -222,7 +222,7 @@ Data is encrypted in transit (HTTPS/TLS). Passwords are never stored in plain te
 
 ## 8. Contact
 
-Data controller: **Cybrief — contact@cybrief.io**
+Data controller: **Cybrief — hello@cybrief.fr**
 ''';
 }
 
