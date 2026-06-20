@@ -1,7 +1,7 @@
 name: cybrief
 description: "A new Flutter project."
 publish_to: 'none'
-version: 1.0.1+2
+version: 1.0.1+3
 
 environment:
   sdk: ^3.10.7
@@ -36,7 +36,7 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/images/logo-cybrief.png"
+  image_path: "assets/images/icon-cybrief.png"
   min_sdk_android: 21
   remove_alpha_ios: true
   background_color_ios: "#0F172A"
