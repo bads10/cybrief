@@ -36,11 +36,14 @@ function adminAuth(req, res, next) {
 // Articles publiés avec pagination cursor et gestion quota freemium
 app.get('/api/articles', async (req, res) => {
   try {
-    const { userId, cursor, limit = '20', lang = 'fr' } = req.query;
+    const { userId, cursor, limit = '20', lang = 'fr', tag } = req.query;
     const take = Math.min(parseInt(limit) || 20, 50);
 
     // Construire la requête de base
     const where = { status: 'PUBLISHED' };
+    // Filtre par tag (ex: ?tag=Ransomware) — insensible à la casse.
+    // Partagé par les 3 branches (invité / premium / gratuit) via l'objet `where`.
+    if (tag && tag.trim()) where.tags = { contains: tag.trim(), mode: 'insensitive' };
     const cursorClause = cursor ? { cursor: { id: parseInt(cursor) }, skip: 1 } : {};
 
     // Utilisateur non connecté → teaser 3 articles
