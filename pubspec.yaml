@@ -32,6 +32,7 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.1
+  flutter_native_splash: ^2.4.4
 
 flutter_launcher_icons:
   android: true
@@ -42,6 +43,15 @@ flutter_launcher_icons:
   background_color_ios: "#0F172A"
   adaptive_icon_background: "#0F172A"
   adaptive_icon_foreground: "assets/images/logo-cybrief.png"
+
+# Écran de lancement (splash) — logo cybrief sur fond de marque, iOS + Android
+flutter_native_splash:
+  color: "#0F172A"
+  image: assets/images/logo-cybrief.png
+  web: false
+  android_12:
+    color: "#0F172A"
+    image: assets/images/logo-cybrief.png
 
 flutter:
   uses-material-design: true
