@@ -4,7 +4,6 @@
 <dict>
 	<key>NSPrivacyAccessedAPITypes</key>
 	<array>
-		<!-- UserDefaults — utilisé par shared_preferences -->
 		<dict>
 			<key>NSPrivacyAccessedAPIType</key>
 			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
@@ -13,7 +12,6 @@
 				<string>CA92.1</string>
 			</array>
 		</dict>
-		<!-- File timestamp — utilisé par certains plugins Flutter -->
 		<dict>
 			<key>NSPrivacyAccessedAPIType</key>
 			<string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
@@ -22,7 +20,6 @@
 				<string>C617.1</string>
 			</array>
 		</dict>
-		<!-- Disk space — utilisé par Flutter engine -->
 		<dict>
 			<key>NSPrivacyAccessedAPIType</key>
 			<string>NSPrivacyAccessedAPICategoryDiskSpace</string>
@@ -34,7 +31,6 @@
 	</array>
 	<key>NSPrivacyCollectedDataTypes</key>
 	<array>
-		<!-- Email address — collecté lors de l'inscription -->
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>
 			<string>NSPrivacyCollectedDataTypeEmailAddress</string>
@@ -47,7 +43,6 @@
 				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
 			</array>
 		</dict>
-		<!-- Name — optionnel, collecté à l'inscription -->
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>
 			<string>NSPrivacyCollectedDataTypeName</string>
@@ -60,7 +55,6 @@
 				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
 			</array>
 		</dict>
-		<!-- Device ID — pour les notifications push (FCM token) -->
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>
 			<string>NSPrivacyCollectedDataTypeDeviceID</string>
@@ -73,7 +67,6 @@
 				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
 			</array>
 		</dict>
-		<!-- Purchase history — pour les abonnements RevenueCat -->
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>
 			<string>NSPrivacyCollectedDataTypePurchaseHistory</string>
