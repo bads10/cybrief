@@ -69,3 +69,8 @@ android/key.properties
 android/key.properties
 ios/build/
 build/
+
+# ── Local-only (état agent-loop, assets marketing, scratch) — non versionnés ──
+.agent-loop/
+1x/
+scratch_xcode/
