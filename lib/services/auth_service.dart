@@ -80,6 +80,7 @@ class AuthService {
       final oauthCredential = OAuthProvider('apple.com').credential(
         idToken: appleCredential.identityToken,
         rawNonce: rawNonce,
+        accessToken: appleCredential.authorizationCode,
       );
 
       await _auth.signInWithCredential(oauthCredential);
@@ -88,9 +89,12 @@ class AuthService {
       if (e.code == AuthorizationErrorCode.canceled) {
         return AuthResult.error('Connexion Apple annulée.');
       }
-      return AuthResult.error('Erreur Apple Sign-In.');
+      return AuthResult.error('Erreur lors de la connexion Apple.');
     } on FirebaseAuthException catch (e) {
-      return AuthResult.error(_translateError(e.code));
+      if (e.code == 'account-exists-with-different-credential') {
+        return AuthResult.error('Un compte existe déjà avec cet email.');
+      }
+      return AuthResult.error('Erreur lors de la connexion Apple.');
     } catch (_) {
       return AuthResult.error('Erreur lors de la connexion Apple.');
     }
