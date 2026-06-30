@@ -5,6 +5,7 @@ import '../theme/terminal_theme.dart';
 import '../services/subscription_service.dart';
 import '../services/user_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class PaywallScreen extends StatefulWidget {
   const PaywallScreen({super.key});
@@ -98,6 +99,13 @@ class _PaywallScreenState extends State<PaywallScreen> {
 
   String _yearlyPerMonth(double yearlyPrice) {
     return (yearlyPrice / 12).toStringAsFixed(2);
+  }
+
+  Future<void> _openUrl(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
   }
 
   @override
@@ -357,6 +365,26 @@ class _PaywallScreenState extends State<PaywallScreen> {
                     child: Text(
                       'SANS ENGAGEMENT · ANNULE QUAND TU VEUX',
                       style: TT.mono(size: 9, letterSpacing: 0.5),
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+                  Center(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        GestureDetector(
+                          onTap: () => _openUrl('https://cybrief-landing.vercel.app/privacy'),
+                          child: Text('Confidentialité',
+                              style: TT.mono(size: 9, color: TT.accent, letterSpacing: 0.5)),
+                        ),
+                        Text('   ·   ', style: TT.mono(size: 9, color: TT.muted)),
+                        GestureDetector(
+                          onTap: () => _openUrl('https://cybrief-landing.vercel.app/terms'),
+                          child: Text('Conditions d\'utilisation',
+                              style: TT.mono(size: 9, color: TT.accent, letterSpacing: 0.5)),
+                        ),
+                      ],
                     ),
                   ),
 
